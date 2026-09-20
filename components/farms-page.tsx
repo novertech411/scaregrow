@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { AlertTriangle, ChevronRight, Clock, MapPin, Plus, Search, Wifi, X } from 'lucide-react'
+import { AlertTriangle, MapPin, Plus, Search } from 'lucide-react'
 
 type FarmStatus = 'Online' | 'Warning' | 'Critical' | 'Offline'
 
@@ -32,58 +32,41 @@ function statusColor(status: FarmStatus) {
   return 'bg-[#dbe8e4] text-[#356b59] border-[#cfe4d2]'
 }
 
-function FarmCard({ farm }: { farm: Farm }) {
+function FarmsTable({ farms }: { farms: Farm[] }) {
   return (
-    <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition hover:shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <h3 className="text-sm font-semibold text-slate-900">{farm.name}</h3>
-          <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500">
-            <MapPin className="size-3.5" />
-            {farm.location}
-          </div>
-        </div>
-        <div className={`rounded-lg border px-2 py-1 text-[11px] font-medium ${statusColor(farm.status)}`}>
-          {farm.status}
-        </div>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 sm:grid-cols-4">
-        <div>
-          <p className="text-2xl font-semibold text-slate-900">{farm.plots}</p>
-          <p className="mt-0.5 text-xs text-slate-500">Plots</p>
-        </div>
-        <div>
-          <p className="text-2xl font-semibold text-slate-900">{farm.totalDevices}</p>
-          <p className="mt-0.5 text-xs text-slate-500">Devices</p>
-        </div>
-        <div>
-          <div className="flex items-center gap-1">
-            <span className="text-lg font-semibold text-slate-900">{farm.onlineDevices}</span>
-            <span className="text-xs text-slate-500">online</span>
-          </div>
-          <div className="mt-1.5 flex items-center gap-1">
-            <span className="text-lg font-semibold text-slate-900">{farm.offlineDevices}</span>
-            <span className="text-xs text-slate-500">offline</span>
-          </div>
-        </div>
-        <div>
-          <div className="flex items-center gap-1">
-            <AlertTriangle className={`size-4 ${farm.openAlerts > 0 ? 'text-amber-600' : 'text-slate-300'}`} />
-            <span className="text-lg font-semibold text-slate-900">{farm.openAlerts}</span>
-          </div>
-          <p className="mt-1.5 text-xs text-slate-500">Alerts</p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
-        <div className="flex items-center gap-1.5 text-xs text-slate-500">
-          <Clock className="size-3.5" />
-          {farm.lastUpdate}
-        </div>
-        <button className="text-xs font-semibold text-[#1f7a52] hover:text-[#156b43] transition">
-          View Farm <ChevronRight className="ml-1 inline size-3.5" />
-        </button>
+    <div className="overflow-hidden rounded-2xl border border-[#d7e8dc] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[820px] border-collapse text-left">
+          <thead className="bg-[#f4faef]">
+            <tr className="border-b border-[#dfeee1] text-[11px] uppercase tracking-[0.12em] text-[#587568]">
+              <th className="px-5 py-3.5 font-semibold">Farm</th>
+              <th className="px-4 py-3.5 font-semibold">Status</th>
+              <th className="px-4 py-3.5 font-semibold">Plots</th>
+              <th className="px-4 py-3.5 font-semibold">Devices</th>
+              <th className="px-4 py-3.5 font-semibold">Alerts</th>
+              <th className="px-4 py-3.5 font-semibold">Last update</th>
+              <th className="px-5 py-3.5 text-right font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#edf3ee]">
+            {farms.map((farm) => (
+              <tr key={farm.id} className="group transition-colors hover:bg-[#fbfdf9]">
+                <td className="px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-9 items-center justify-center rounded-xl bg-[#e6f4d8] text-[#1f7a52]"><MapPin className="size-4" strokeWidth={2.4} /></div>
+                    <div><p className="text-sm font-semibold text-slate-900">{farm.name}</p><p className="mt-0.5 text-xs text-slate-500">{farm.location}</p></div>
+                  </div>
+                </td>
+                <td className="px-4 py-4"><span className={`inline-flex rounded-lg border px-2.5 py-1 text-[11px] font-semibold ${statusColor(farm.status)}`}>{farm.status}</span></td>
+                <td className="px-4 py-4 text-sm font-semibold text-slate-800">{farm.plots}</td>
+                <td className="px-4 py-4"><p className="text-sm font-semibold text-slate-800">{farm.totalDevices}</p><p className="mt-0.5 text-xs text-[#1f7a52]">{farm.onlineDevices} online <span className="text-slate-400">/ {farm.offlineDevices} offline</span></p></td>
+                <td className="px-4 py-4"><div className="flex items-center gap-1.5"><AlertTriangle className={`size-4 ${farm.openAlerts > 0 ? 'text-amber-600' : 'text-slate-300'}`} strokeWidth={2.3} /><span className="text-sm font-semibold text-slate-800">{farm.openAlerts}</span></div></td>
+                <td className="px-4 py-4 text-xs text-slate-500">{farm.lastUpdate}</td>
+                <td className="px-5 py-4 text-right"><button className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1f7a52] transition hover:bg-[#e6f4d8]">View farm</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )
@@ -148,11 +131,7 @@ export function FarmsPage() {
           <p className="mt-1 text-xs text-slate-500">Adjust your search or filters to find farms.</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-          {filtered.map((farm) => (
-            <FarmCard key={farm.id} farm={farm} />
-          ))}
-        </div>
+        <FarmsTable farms={filtered} />
       )}
     </div>
   )
