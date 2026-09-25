@@ -1,6 +1,6 @@
-import ScareGrowDashboard from '@/components/scaregrow-dashboard'
+import GreenerDashboard from '@/components/greener-dashboard'
 
 export default async function AlertDetailRoute({ params }: { params: Promise<{ alertId: string }> }) {
   const { alertId } = await params
-  return <ScareGrowDashboard initialPage="Alerts" alertId={alertId} />
+  return <GreenerDashboard initialPage="Alerts" alertId={alertId} />
 }

@@ -1,4 +1,4 @@
-# Deploy ScareGrow to Vercel
+# Deploy Greener to Vercel
 
 This project uses Next.js, Node.js 22 and pnpm 12.3.4. `vercel.json` pins the
 install and build commands to pnpm; `pnpm-lock.yaml` is the authoritative lockfile.
@@ -22,8 +22,8 @@ values. Keep `.env.local` out of Git.
 ## Deploy from GitHub
 
 1. Commit and push the application files, including the new routes, services,
-   images, font files, tests, and deployment configuration, to
-   `novertech411/scaregrow`.
+   images, font files, tests, and deployment configuration, to the GitHub
+   repository connected to your Greener deployment.
 2. In Vercel, choose **Add New → Project**, import that repository, select the
    **Next.js** preset, and leave the root directory at the repository root.
 3. Add these environment variables for Production and Preview, using the values

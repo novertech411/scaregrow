@@ -6,8 +6,6 @@ import Link from 'next/link'
 import { signIn } from '@/lib/supabase/auth'
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react'
 
-const farmImage = '/images/login.png'
-
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
@@ -38,13 +36,30 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-end overflow-hidden bg-[#123d2d] p-4 sm:p-6 lg:p-10">
-      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${farmImage})` }} aria-hidden="true" />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(18,61,45,.16),rgba(18,61,45,.46)_48%,rgba(18,61,45,.84))]" aria-hidden="true" />
-      <div className="relative z-10 mr-0 w-full max-w-[420px] rounded-[24px] border border-white/60 bg-white/95 p-6 shadow-[0_24px_80px_rgba(8,35,24,.3)] backdrop-blur sm:p-7 lg:mr-[5vw]">
+    <main className="grid min-h-svh bg-white md:grid-cols-2">
+      <section aria-label="Grow with Greener" className="relative isolate flex min-h-[240px] flex-col justify-end overflow-hidden bg-[#123d2d] px-6 py-8 sm:px-10 md:min-h-svh md:p-12 lg:p-16">
+        <img
+          src="/images/login.webp"
+          srcSet="/images/login-mobile.webp 640w, /images/login.webp 1280w"
+          sizes="(min-width: 768px) 50vw, 100vw"
+          width={1280}
+          height={839}
+          alt=""
+          fetchPriority="high"
+          className="absolute inset-0 -z-20 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#09281f]/95 via-[#123d2d]/30 to-transparent" aria-hidden="true" />
+        <div className="max-w-md text-white">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#d8f2b1]">Rooted in better farming</p>
+          <h2 className="text-3xl font-semibold leading-tight tracking-tight lg:text-5xl">Know your soil.<br />Grow with confidence.</h2>
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/80">Keep a closer eye on your fields, spot changes early, and give every crop the care it needs.</p>
+        </div>
+      </section>
+      <section aria-label="Sign in to Greener" className="flex items-center justify-center bg-white px-6 py-10 sm:px-10 md:py-16">
+      <div className="w-full max-w-[380px] bg-white">
         <div className="mb-5 flex items-center gap-2.5">
           <img src="/images/icon.png" alt="Logo" className="size-6" />
-          <p className="text-lg font-bold tracking-tight text-[#123d2d]">ScareGrow</p>
+          <p className="text-lg font-bold tracking-tight text-[#123d2d]">Greener</p>
         </div>
         
         <div className="mb-5">
@@ -57,7 +72,7 @@ export default function LoginPage() {
             Email address
             <div className="flex items-center rounded-xl border border-slate-200 bg-white px-3 transition focus-within:border-[#4d9b6b] focus-within:ring-2 focus-within:ring-[#dff1c3]">
               <Mail className="size-4 text-slate-400" />
-              <input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@greenedenfarms.com" className="h-10 w-full bg-transparent px-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400" />
+              <input required autoComplete="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@greenedenfarms.com" className="h-10 w-full bg-transparent px-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400" />
             </div>
           </label>
 
@@ -65,7 +80,7 @@ export default function LoginPage() {
             Password
             <div className="flex items-center rounded-xl border border-slate-200 bg-white px-3 transition focus-within:border-[#4d9b6b] focus-within:ring-2 focus-within:ring-[#dff1c3]">
               <LockKeyhole className="size-4 text-slate-400" />
-              <input required type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter password" className="h-10 w-full bg-transparent px-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400" />
+              <input required autoComplete="current-password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter password" className="h-10 w-full bg-transparent px-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400" />
               <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
@@ -94,6 +109,7 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
+      </section>
     </main>
   )
 }

@@ -133,7 +133,7 @@ test('CSV includes specified columns, status, ISO timestamp, proper escaping and
   const csv = view.readingsCsv([sample])
   assert.ok(csv.startsWith('\uFEFF"Timestamp","Farm","Plot","Device","Moisture (%)","Temperature (°C)","pH","EC (µS/cm)","Status"\r\n'))
   assert.ok(csv.includes('"2026-09-25T12:00:00Z","Green, ""Eden""","North\nField","SG-1","42","27","6.8","1200","Online"'))
-  assert.equal(view.readingsCsvFilename(new Date(2026, 8, 25)), 'scaregrow-readings-2026-09-25.csv')
+  assert.equal(view.readingsCsvFilename(new Date(2026, 8, 25)), 'greener-readings-2026-09-25.csv')
 })
 
 

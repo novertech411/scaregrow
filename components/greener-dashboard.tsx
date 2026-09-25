@@ -43,7 +43,7 @@ const SettingsPage = dynamic(() => import('./settings-page').then((module) => mo
 const AlertsPage = dynamic(() => import('./alerts-page').then((module) => module.AlertsPage), { loading: PageLoading })
 const AlertDetail = dynamic(() => import('./alerts-page').then((module) => module.AlertDetail), { loading: PageLoading })
 
-export default function ScareGrowDashboard({
+export default function GreenerDashboard({
   initialPage = 'Overview',
   alertId,
   deviceId,

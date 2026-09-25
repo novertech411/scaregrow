@@ -41,7 +41,7 @@ export function readingsCsv(rows: ReadingRow[]) {
 
 export function readingsCsvFilename(date = new Date()) {
   const day = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
-  return `scaregrow-readings-${day}.csv`
+  return `greener-readings-${day}.csv`
 }
 
 // Normalize each metric over the displayed page; tooltips retain original units.

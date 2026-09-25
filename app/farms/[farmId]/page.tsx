@@ -1,6 +1,6 @@
-import ScareGrowDashboard from '@/components/scaregrow-dashboard'
+import GreenerDashboard from '@/components/greener-dashboard'
 
 export default async function FarmDetailRoute({ params }: { params: Promise<{ farmId: string }> }) {
   const { farmId } = await params
-  return <ScareGrowDashboard initialPage="Farms" farmId={farmId} />
+  return <GreenerDashboard initialPage="Farms" farmId={farmId} />
 }

@@ -49,7 +49,7 @@ function AddDeviceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (devic
         <div className="flex items-start justify-between">
           <div>
             <h2 id="add-device-title" className="text-lg font-semibold text-slate-900">Add Device</h2>
-            <p className="mt-1 text-sm text-slate-500">Connect a ScareGrow field monitoring node.</p>
+            <p className="mt-1 text-sm text-slate-500">Connect a Greener field monitoring node.</p>
           </div>
           <button aria-label="Close add device dialog" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700">
             <X className="size-4" />
@@ -274,7 +274,7 @@ export function DevicesPage({ selectedDeviceId, onSelectDevice }: { selectedDevi
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Devices</h1>
-          <p className="mt-1 text-sm text-slate-500">Monitor the health and connectivity of your ScareGrow field devices.</p>
+          <p className="mt-1 text-sm text-slate-500">Monitor the health and connectivity of your Greener field devices.</p>
         </div>
         <button onClick={() => setIsAddOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-[#1f7a52] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#156b43] sm:whitespace-nowrap">
           <Plus className="size-4" />Add Device
@@ -321,7 +321,7 @@ export function DevicesPage({ selectedDeviceId, onSelectDevice }: { selectedDevi
       ) : (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 px-6 py-12 text-center">
           <h3 className="text-sm font-semibold text-slate-700">No devices connected yet.</h3>
-          <p className="mt-1 text-xs text-slate-500">Add a ScareGrow field device to start monitoring soil conditions.</p>
+          <p className="mt-1 text-xs text-slate-500">Add a Greener field device to start monitoring soil conditions.</p>
           <button onClick={() => setIsAddOpen(true)} className="mt-4 rounded-xl bg-[#1f7a52] px-4 py-2 text-xs font-semibold text-white">Add Device</button>
         </div>
       )}

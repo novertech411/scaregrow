@@ -11,24 +11,11 @@ const inter = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'ScareGrow | Farm monitoring',
+  title: 'Greener | Farm monitoring',
   description: 'Operational farm and soil monitoring for Green Eden Farms.',
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+    icon: [{ url: '/images/greener-tab.png', type: 'image/png', sizes: '48x48' }],
+    apple: [{ url: '/images/greener-apple.png', type: 'image/png', sizes: '180x180' }],
   },
 }
 

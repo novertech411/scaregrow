@@ -1,5 +1,5 @@
-import ScareGrowDashboard from '@/components/scaregrow-dashboard'
+import GreenerDashboard from '@/components/greener-dashboard'
 
 export default function SettingsRoute() {
-  return <ScareGrowDashboard initialPage="Settings" />
+  return <GreenerDashboard initialPage="Settings" />
 }

@@ -1,7 +1,7 @@
-# GREEN EDEN — SCAREGROW
+# GREEN EDEN — GREENER
 ## Engineering README / Product Context
 
-ScareGrow is a farm monitoring and soil-condition monitoring system built under Green Eden.
+Greener is a farm monitoring and soil-condition monitoring system built under Green Eden.
 
 ## 1. System Overview
 
@@ -21,13 +21,13 @@ The system combines physical field hardware with cloud software:
 
 High-level data flow:
 
-SOIL PROBE → ESP32 → SIM800L / GPRS → SECURE INGESTION API → APPLICATION SERVER → DATABASE → RULES / ALERT ENGINE → SCAREGROW WEB DASHBOARD → USERS + NOTIFICATIONS
+SOIL PROBE → ESP32 → SIM800L / GPRS → SECURE INGESTION API → APPLICATION SERVER → DATABASE → RULES / ALERT ENGINE → GREENER WEB DASHBOARD → USERS + NOTIFICATIONS
 
 The dashboard does not read the soil sensor directly. Field devices communicate with the cloud ingestion service, and the dashboard consumes normalized application data.
 
 ## 2. Current Development Stage
 
-The ScareGrow UI was initially generated with v0.
+The Greener UI was initially generated with v0.
 
 Antigravity is now responsible for taking the existing UI and implementing the actual application locally.
 
@@ -168,7 +168,7 @@ Allow readings to be exported as CSV.
 
 Route: `/devices`
 
-Each Device represents a physical ScareGrow field node.
+Each Device represents a physical Greener field node.
 
 Device information:
 - device_id
@@ -759,7 +759,7 @@ React should display the result produced by the backend/application services.
 
 Do not:
 - Redesign the existing UI
-- Replace the existing ScareGrow visual language
+- Replace the existing Greener visual language
 - Invent agricultural metrics
 - Invent farm-health scores
 - Hard-code universal soil thresholds
@@ -774,14 +774,14 @@ Do not:
 - Create fake backend success states
 - Label soil as “toxic”, “dangerous”, “bad”, etc. based only on these measurements
 
-ScareGrow should describe measured conditions precisely.
+Greener should describe measured conditions precisely.
 
 Agronomic recommendations should be tied to defined crop profiles and confirmed field practice.
 
 ## 31. Complete System
 
 GREEN EDEN
-└── SCAREGROW
+└── GREENER
     │
     ├── HARDWARE
     │   ├── ESP32
@@ -819,7 +819,7 @@ SOIL PROBE
 
 ## 32. Core System Loop
 
-The core ScareGrow loop is:
+The core Greener loop is:
 
 SENSE
 → VALIDATE
@@ -836,7 +836,7 @@ The dashboard is the operational interface, but the real system is the complete 
 
 ## 33. Engineering Principle
 
-Build ScareGrow so that the UI is not the system.
+Build Greener so that the UI is not the system.
 
 The UI is a client of the system.
 

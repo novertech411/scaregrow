@@ -1,4 +1,4 @@
-import ScareGrowDashboard from '@/components/scaregrow-dashboard'
+import GreenerDashboard from '@/components/greener-dashboard'
 
 export default async function DeviceDetailRoute({
   params,
@@ -6,5 +6,5 @@ export default async function DeviceDetailRoute({
   params: Promise<{ deviceId: string }>
 }) {
   const resolvedParams = await params
-  return <ScareGrowDashboard initialPage="Devices" deviceId={resolvedParams.deviceId} />
+  return <GreenerDashboard initialPage="Devices" deviceId={resolvedParams.deviceId} />
 }

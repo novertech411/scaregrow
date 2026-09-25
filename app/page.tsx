@@ -1,5 +1,5 @@
-import ScareGrowDashboard from '@/components/scaregrow-dashboard'
+import GreenerDashboard from '@/components/greener-dashboard'
 
 export default function Page() {
-  return <ScareGrowDashboard />
+  return <GreenerDashboard />
 }

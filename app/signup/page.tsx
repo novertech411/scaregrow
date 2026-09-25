@@ -46,7 +46,7 @@ export default function SignUpPage() {
       <div className="relative z-10 mr-0 w-full max-w-[420px] rounded-[24px] border border-white/60 bg-white/95 p-6 shadow-[0_24px_80px_rgba(8,35,24,.3)] backdrop-blur sm:p-7 lg:mr-[5vw]">
         <div className="mb-5 flex items-center gap-2.5">
           <img src="/images/icon.png" alt="Logo" className="size-6" />
-          <p className="text-lg font-bold tracking-tight text-[#123d2d]">ScareGrow</p>
+          <p className="text-lg font-bold tracking-tight text-[#123d2d]">Greener</p>
         </div>
         
         <div className="mb-5">

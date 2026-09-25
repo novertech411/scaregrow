@@ -111,7 +111,7 @@ export function UsersPage() {
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#2b8b61]">Administration</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px]">Users</h1>
-          <p className="mt-1 text-sm text-slate-500">Manage people who have access to ScareGrow.</p>
+          <p className="mt-1 text-sm text-slate-500">Manage people who have access to Greener.</p>
         </div>
         <button onClick={() => setInviteOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-[#1f7a52] px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#176b46]">
           <UserPlus className="size-4" />Invite User
@@ -251,7 +251,7 @@ export function UsersPage() {
             <div className="flex items-start justify-between">
               <div>
                 <h2 id="user-dialog-title" className="text-lg font-semibold text-slate-900">{inviteOpen ? 'Invite User' : 'Edit User'}</h2>
-                <p className="mt-1 text-sm text-slate-500">{inviteOpen ? 'Give someone access to ScareGrow.' : 'Update this user’s access and account status.'}</p>
+                <p className="mt-1 text-sm text-slate-500">{inviteOpen ? 'Give someone access to Greener.' : 'Update this user’s access and account status.'}</p>
               </div>
               <button aria-label="Close dialog" onClick={() => { setInviteOpen(false); setEditing(null) }} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
                 <X className="size-4" />
