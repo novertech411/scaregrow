@@ -4,15 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@media (max-width: 1023px) {
-  nav[aria-label="Mobile navigation"] { background: #123d2d !important; }
-  nav[aria-label="Mobile navigation"] button { color: rgba(255,255,255,.78); }
-  nav[aria-label="Mobile navigation"] button[aria-label="Overview"] { background: #b9e878 !important; color: #123d2d !important; }
-  nav.fixed[class*="bottom"] { background: #123d2d !important; color: white !important; }
-  nav.fixed[class*="bottom"] button { color: rgba(255,255,255,.78) !important; }
-  nav.fixed[class*="bottom"] button:first-child { background: #b9e878 !important; color: #123d2d !important; }
-}
-
 
 @theme inline {
   --color-background: var(--background);

@@ -1,160 +1,245 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
+import { PageLoading, PanelLoading } from '@/components/ui/page-loading'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Activity,
   AlertTriangle,
-  Bell,
   BatteryMedium,
-  BarChart3,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  CircleHelp,
-  ClipboardList,
   CloudSun,
   Droplets,
-  FileText,
-  Gauge,
-  Leaf,
   Map,
-  Menu,
-  MoreHorizontal,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Search,
-  Settings,
   ShieldCheck,
   Signal,
-  SlidersHorizontal,
-  Sprout,
-  Thermometer,
-  Users,
   Wifi,
   X,
-  Zap,
 } from 'lucide-react'
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { FarmsPage } from './farms-page'
-import { DevicesPage } from './devices-page'
-import { ReadingsPage } from './readings-page'
-import { AlertDetail, AlertsPage } from './alerts-page'
-import { UsersPage } from './users-page'
-import { SettingsPage } from './settings-page'
+import type { Alert, PageKey, Reading } from '@/lib/types'
+import { getReadings, getMoistureTrend } from '@/lib/services/readings'
+import { getAlerts } from '@/lib/services/alerts'
+import { getDashboardSummary } from '@/lib/services/dashboard'
+import { getMapDevices, type MapDevice } from '@/lib/services/map-devices'
+import { getCurrentProfile, type CurrentProfile } from '@/lib/supabase/profile'
+import { toAlert, toReading } from '@/lib/services/presenters'
+import { Sidebar } from '@/components/layout/sidebar'
+import { Header } from '@/components/layout/header'
+import { MobileNav } from '@/components/layout/mobile-nav'
+import { BrandMark } from '@/components/layout/brand-mark'
+import { MetricCard } from '@/components/dashboard/metric-card'
+import { ReadingsTable } from '@/components/dashboard/readings-table'
+import { AlertsPanel } from '@/components/dashboard/alerts-panel'
 
-const mapImage = 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/c5adb1f72a0bd20534d25b3b22f84784-z78CaqCWLy3MsoPyKhC2qictx7SXPL.webp'
+const FarmMap = dynamic(() => import('@/components/dashboard/farm-map').then((module) => module.FarmMap), { loading: () => <PanelLoading label="Loading map…" className="min-h-[430px]" /> })
+const TrendChart = dynamic(() => import('@/components/dashboard/trend-chart').then((module) => module.TrendChart), { loading: () => <PanelLoading label="Loading chart…" className="min-h-[310px]" /> })
+const FarmsPage = dynamic(() => import('./farms-page').then((module) => module.FarmsPage), { loading: PageLoading })
+const FarmDetailPage = dynamic(() => import('./farm-detail-page').then((module) => module.FarmDetailPage), { loading: PageLoading })
+const DevicesPage = dynamic(() => import('./devices-page').then((module) => module.DevicesPage), { loading: PageLoading })
+const ReadingsPage = dynamic(() => import('./readings-page').then((module) => module.ReadingsPage), { loading: PageLoading })
+const UsersPage = dynamic(() => import('./users-page').then((module) => module.UsersPage), { loading: PageLoading })
+const SettingsPage = dynamic(() => import('./settings-page').then((module) => module.SettingsPage), { loading: PageLoading })
+const AlertsPage = dynamic(() => import('./alerts-page').then((module) => module.AlertsPage), { loading: PageLoading })
+const AlertDetail = dynamic(() => import('./alerts-page').then((module) => module.AlertDetail), { loading: PageLoading })
 
-type Status = 'Online' | 'Warning' | 'Critical' | 'Offline' | 'Syncing' | 'Resolved'
-type PageKey = 'Overview' | 'Farms' | 'Devices' | 'Readings' | 'Alerts' | 'Users' | 'Settings'
+export default function ScareGrowDashboard({
+  initialPage = 'Overview',
+  alertId,
+  deviceId,
+  farmId,
+}: {
+  initialPage?: PageKey
+  alertId?: string
+  deviceId?: string
+  farmId?: string
+}) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const activePage: PageKey = useMemo(() => {
+    if (pathname.startsWith('/farms')) return 'Farms'
+    if (pathname.startsWith('/devices')) return 'Devices'
+    if (pathname.startsWith('/readings')) return 'Readings'
+    if (pathname.startsWith('/alerts')) return 'Alerts'
+    if (pathname.startsWith('/users')) return 'Users'
+    if (pathname.startsWith('/settings')) return 'Settings'
+    return initialPage
+  }, [pathname, initialPage])
 
-type Reading = {
-  plot: string
-  farm: string
-  crop: string
-  device: string
-  status: Status
-  moisture: number
-  temperature: number
-  ph: number
-  ec: number
-  updated: string
-  battery: number
-  signal: string
-}
 
-const readings: Reading[] = [
-  { plot: 'North Field A1', farm: 'Green Eden Farm', crop: 'Corn', device: 'SG-JOS-001', status: 'Online', moisture: 31.4, temperature: 24.8, ph: 6.3, ec: 840, updated: '2 min ago', battery: 92, signal: '-83 dBm' },
-  { plot: 'South Field B2', farm: 'Green Eden Farm', crop: 'Tomato', device: 'SG-JOS-002', status: 'Warning', moisture: 18.2, temperature: 27.1, ph: 6.7, ec: 920, updated: '4 min ago', battery: 68, signal: '-88 dBm' },
-  { plot: 'East Field C1', farm: 'Green Eden Farm', crop: 'Cassava', device: 'SG-JOS-003', status: 'Online', moisture: 42.6, temperature: 25.3, ph: 6.1, ec: 710, updated: '1 min ago', battery: 84, signal: '-79 dBm' },
-  { plot: 'West Orchard D1', farm: 'Green Eden Farm', crop: 'Mango', device: 'SG-JOS-004', status: 'Offline', moisture: 29.8, temperature: 25.9, ph: 6.5, ec: 805, updated: '2h 18m ago', battery: 24, signal: 'Unavailable' },
-]
-
-const trendData = [
-  { day: 'Sep 10', moisture: 26.2 }, { day: 'Sep 11', moisture: 27.8 }, { day: 'Sep 12', moisture: 29.1 },
-  { day: 'Sep 13', moisture: 27.4 }, { day: 'Sep 14', moisture: 30.6 }, { day: 'Sep 15', moisture: 31.2 }, { day: 'Sep 16', moisture: 31.4 },
-]
-
-const navItems: { label: PageKey; icon: typeof Activity }[] = [
-  { label: 'Overview', icon: Activity }, { label: 'Farms', icon: Sprout }, { label: 'Devices', icon: Wifi },
-  { label: 'Readings', icon: BarChart3 }, { label: 'Alerts', icon: AlertTriangle }, { label: 'Users', icon: Users }, { label: 'Settings', icon: Settings },
-]
-
-function statusStyles(status: Status) {
-  if (status === 'Online' || status === 'Resolved') return 'bg-[#d8f2b1] text-[#245e3e] ring-4 ring-[#eef9de] border-emerald-100'
-  if (status === 'Warning' || status === 'Syncing') return 'bg-[#ffe4a8] text-[#9a5b08] ring-4 ring-[#fff4d7] border-amber-100'
-  if (status === 'Critical') return 'bg-red-50 text-red-700 border-red-100'
-  return 'bg-[#dbe8e4] text-[#356b59] ring-4 ring-[#f0f6f2] border-slate-200'
-}
-
-function StatusBadge({ status }: { status: Status }) {
-  return <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${statusStyles(status)}`}><span className="size-1.5 rounded-full bg-current" />{status}</span>
-}
-
-function BrandMark() {
-  return <div className="flex items-center gap-2.5"><div className="relative flex size-9 items-center justify-center rounded-xl bg-[#1f7a52] text-white shadow-sm"><Leaf className="size-5" strokeWidth={2.6} /><span className="absolute bottom-1 left-2 size-1 rounded-full bg-lime-300" /></div><div className="hidden xl:block"><p className="text-[15px] font-semibold tracking-tight text-slate-900 group-data-[dark]:text-white">ScareGrow</p><p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-400 group-data-[dark]:text-white/60">Farm intelligence</p></div></div>
-}
-
-function Sidebar({ active, setActive, collapsed, setCollapsed }: { active: PageKey; setActive: (page: PageKey) => void; collapsed: boolean; setCollapsed: (value: boolean) => void }) {
-  return <aside className={`hidden shrink-0 border-r border-[#174c37] bg-[#123d2d] text-white transition-all duration-200 lg:flex lg:flex-col ${collapsed ? 'w-[76px]' : 'w-[224px]'}`}>
-    <div className={`flex h-[76px] items-center border-b border-white/10 px-4 ${collapsed ? 'justify-center' : 'justify-between'}`}><BrandMark /><button aria-label="Toggle sidebar" className="rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setCollapsed(!collapsed)}>{collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}</button></div>
-    <nav className="flex flex-1 flex-col gap-1 px-3 py-5">{navItems.map(({ label, icon: Icon }) => <button key={label} aria-label={label} onClick={() => setActive(label)} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${active === label ? 'bg-[#b9e878] text-[#123d2d] shadow-sm' : 'text-white/70 hover:bg-white/10 hover:text-white'} ${collapsed ? 'justify-center' : ''}`}><Icon className="size-[18px]" strokeWidth={1.8} /><span className={collapsed ? 'sr-only' : ''}>{label}</span>{label === 'Alerts' && !collapsed && <span className="ml-auto flex size-5 items-center justify-center rounded-full bg-red-50 text-[10px] font-semibold text-red-600">3</span>}</button>)}</nav>
-    <div className="border-t border-white/10 p-3"><div className={`flex items-center gap-3 rounded-xl p-2 ${collapsed ? 'justify-center' : ''}`}><div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#dbeee2] text-sm font-semibold text-[#256d4a]">AM</div><div className={collapsed ? 'sr-only' : ''}><p className="text-sm font-semibold text-white">Amina Musa</p><p className="text-xs text-white/55">Farm Manager</p></div><button aria-label="Profile settings" className={`ml-auto text-white/50 hover:text-white ${collapsed ? 'hidden' : ''}`}><MoreHorizontal className="size-4" /></button></div></div>
-  </aside>
-}
-
-function Header({ active, search, setSearch, setMobileOpen }: { active: PageKey; search: string; setSearch: (value: string) => void; setMobileOpen: (value: boolean) => void }) {
-  const [open, setOpen] = useState(false)
-  const [readIds, setReadIds] = useState<string[]>(['resolved'])
-  const notifications = [{ id: 'soil', title: 'Low soil moisture', meta: 'North Field A1 · Green Eden Farm', description: 'Soil moisture is below the configured threshold.', time: '12 min ago', tone: 'text-amber-600', href: '/alerts/ALT-001' }, { id: 'offline', title: 'Device offline', meta: 'East Field C1 · Green Eden Farm', description: 'SG-JOS-003 has not reported within the offline window.', time: '2h ago', tone: 'text-red-600', href: '/devices/SG-JOS-003' }, { id: 'battery', title: 'Low battery', meta: 'South Field B2 · North Valley Farm', description: 'Battery level is 18%.', time: '4h ago', tone: 'text-amber-600', href: '/alerts/ALT-003' }, { id: 'resolved', title: 'Alert resolved', meta: 'North Field A1 · Green Eden Farm', description: 'Soil moisture returned within the configured range.', time: 'Yesterday', tone: 'text-[#1f7a52]', href: '/alerts/ALT-004' }]
-  const unread = notifications.filter((notification) => !readIds.includes(notification.id)).length
-  useEffect(() => { const close = () => setOpen(false); const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') close() }; if (!open) return; document.addEventListener('click', close); document.addEventListener('keydown', escape); return () => { document.removeEventListener('click', close); document.removeEventListener('keydown', escape) } }, [open])
-  return <header className="flex h-[76px] items-center gap-3 border-b border-[#d8e5d9] bg-[#fbfdf9] px-4 sm:px-6 lg:px-8"><button aria-label="Open navigation" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-50 lg:hidden"><Menu className="size-5" /></button><div className="lg:hidden"><BrandMark /></div><div className="hidden min-w-0 md:block"><p className="text-[11px] font-medium uppercase tracking-[0.15em] text-slate-400">Green Eden Farms</p><p className="truncate text-base font-semibold text-slate-900">{active}</p></div><div className="relative ml-auto w-full max-w-[340px]"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><input aria-label="Search farms, plots, devices, and readings" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search farms, plots, devices..." className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-3 text-sm outline-none transition focus:border-[#7dbb98] focus:bg-white focus:ring-2 focus:ring-[#dcefe3]" /></div><div className="relative" onClick={(event) => event.stopPropagation()}><button aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`} aria-expanded={open} onClick={() => setOpen(!open)} className="relative rounded-xl p-2.5 text-slate-500 hover:bg-slate-50"><Bell className="size-[19px]" />{unread > 0 && <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-[#d94c42] px-1 text-[10px] font-bold leading-4 text-white ring-2 ring-[#fbfdf9]">{unread}</span>}</button>{open && <div role="dialog" aria-label="Notifications" className="absolute right-0 top-12 z-50 w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-[#d7e8dc] bg-white shadow-[0_18px_50px_rgba(18,61,45,0.18)]"><div className="flex items-center justify-between border-b border-[#edf3ee] px-4 py-3"><h2 className="text-sm font-semibold text-slate-900">Notifications</h2><button onClick={() => setReadIds(notifications.map((item) => item.id))} className="text-xs font-semibold text-[#1f7a52] hover:underline">Mark all as read</button></div><div className="max-h-[390px] overflow-y-auto">{notifications.map((notification) => { const isRead = readIds.includes(notification.id); return <a key={notification.id} href={notification.href} onClick={() => setReadIds((current) => current.includes(notification.id) ? current : [...current, notification.id])} className={`block border-b border-[#edf3ee] px-4 py-3 transition hover:bg-[#f5faef] ${isRead ? 'bg-white' : 'bg-[#f4faef]'}`}><div className="flex gap-3"><span className={`mt-0.5 ${notification.tone}`}><AlertTriangle className="size-4" strokeWidth={2.4} /></span><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><p className={`text-xs ${isRead ? 'font-medium' : 'font-bold'} text-slate-900`}>{notification.title}</p><span className="shrink-0 text-[10px] text-slate-400">{notification.time}</span></div><p className="mt-1 text-[11px] font-medium text-[#587568]">{notification.meta}</p><p className="mt-1 text-xs leading-5 text-slate-500">{notification.description}</p></div>{!isRead && <span className="mt-1 size-1.5 shrink-0 rounded-full bg-[#1f7a52]" />}</div></a> })}</div><a href="/alerts" className="block bg-[#fbfdf9] px-4 py-3 text-center text-xs font-bold text-[#1f7a52] hover:bg-[#f4faef]">View all notifications →</a></div>}</div><div className="hidden items-center gap-2 border-l border-slate-200 pl-3 sm:flex"><div className="flex size-9 items-center justify-center rounded-full bg-[#dbeee2] text-sm font-semibold text-[#256d4a]">AM</div><ChevronDown className="size-4 text-slate-400" /></div></header>
-}
-
-function MetricCard({ title, value, subtitle, icon: Icon, tone }: { title: string; value: string; subtitle: string; icon: typeof Activity; tone: string }) {
-  return <div className="rounded-2xl border border-[#d7e8dc] bg-gradient-to-br from-white via-white to-[#eff9e8] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"><div className="flex items-start justify-between"><div><p className="text-xs font-medium text-slate-500">{title}</p><p className="mt-2 text-[27px] font-semibold tracking-tight text-slate-900">{value}</p></div><div className={`flex size-9 items-center justify-center rounded-xl ${tone}`}><Icon className="size-[18px]" strokeWidth={1.8} /></div></div><p className="mt-2 text-xs text-slate-400">{subtitle}</p></div>
-}
-
-function FarmMap({ selectedPlot, setSelectedPlot }: { selectedPlot: Reading; setSelectedPlot: (reading: Reading) => void }) {
-  return <section className="relative min-h-[430px] overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"><img src={mapImage} alt="Aerial view of Green Eden Farm fields" className="absolute inset-0 size-full object-cover object-center" /><div className="absolute inset-0 bg-[#123923]/10" /><div className="absolute left-[14%] top-[20%] h-[62%] w-[54%] rotate-[-7deg] rounded-[38%] border-2 border-dashed border-white/90 bg-emerald-400/10 shadow-[0_0_0_999px_rgba(11,50,30,0.08)]" /><div className="absolute left-[37%] top-[42%] h-20 w-32 rounded-full bg-amber-400/35 blur-xl" /><div className="absolute left-[23%] top-[60%] h-14 w-24 rounded-full bg-red-400/25 blur-lg" />
-    {readings.map((reading, index) => <button key={reading.plot} aria-label={`Select ${reading.plot}`} onClick={() => setSelectedPlot(reading)} className={`absolute flex items-center justify-center rounded-full border-2 border-white shadow-lg transition-transform hover:scale-110 ${reading.status === 'Online' ? 'bg-[#27a36a]' : reading.status === 'Warning' ? 'bg-amber-500' : 'bg-slate-500'} ${index === 0 ? 'left-[44%] top-[46%]' : index === 1 ? 'left-[66%] top-[33%]' : index === 2 ? 'left-[26%] top-[35%]' : 'left-[70%] top-[69%]'} size-4`}><span className="sr-only">{reading.status}</span></button>)}
-    <div className="absolute left-4 top-4 flex items-center gap-2 rounded-xl border border-white/70 bg-white/90 px-3 py-2 text-xs font-medium text-slate-700 shadow-sm backdrop-blur"><Map className="size-3.5 text-[#1f7a52]" />Green Eden Farm <ChevronDown className="size-3.5 text-slate-400" /></div><div className="absolute bottom-4 left-4 rounded-xl border border-white/70 bg-white/90 px-3 py-2 text-xs text-slate-600 shadow-sm backdrop-blur"><span className="font-semibold text-slate-800">12 plots</span><span className="mx-2 text-slate-300">•</span><span>8 devices</span></div>
-    <div className="absolute bottom-4 right-4 w-[min(290px,calc(100%-32px))] rounded-2xl border border-white/60 bg-slate-950/80 p-4 text-white shadow-xl backdrop-blur-md"><div className="flex items-start justify-between"><div><p className="text-sm font-semibold">{selectedPlot.plot}</p><p className="mt-0.5 text-[11px] text-white/60">{selectedPlot.crop} · {selectedPlot.device}</p></div><button aria-label="Close plot details" className="text-white/60 hover:text-white" onClick={() => setSelectedPlot(readings[0])}><X className="size-4" /></button></div><div className="mt-4 grid grid-cols-3 gap-2 border-y border-white/10 py-3"><div><p className="text-lg font-semibold">{selectedPlot.moisture}%</p><p className="text-[10px] text-white/55">Moisture</p></div><div><p className="text-lg font-semibold">{selectedPlot.temperature}°</p><p className="text-[10px] text-white/55">Temperature</p></div><div><p className="text-lg font-semibold">{selectedPlot.ph}</p><p className="text-[10px] text-white/55">pH level</p></div></div><div className="mt-3 flex items-center justify-between text-[11px]"><span className="text-white/55">Last update</span><span>{selectedPlot.updated}</span></div><button className="mt-3 w-full rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-900 transition hover:bg-emerald-50">View Plot Details <ChevronRight className="ml-1 inline size-3.5" /></button></div>
-  </section>
-}
-
-function ReadingsTable({ rows, onSelect }: { rows: Reading[]; onSelect: (reading: Reading) => void }) {
-  return <section className="rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]"><div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h2 className="text-sm font-semibold text-slate-900">Latest Readings</h2><p className="mt-1 text-xs text-slate-400">Current conditions from connected devices</p></div><button className="hidden items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 sm:flex"><SlidersHorizontal className="size-3.5" />Filter</button></div><div className="hidden overflow-x-auto md:block"><table className="w-full text-left text-sm"><thead className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-medium uppercase tracking-wide text-slate-400"><tr><th className="px-5 py-3">Farm / Plot</th><th className="px-3 py-3">Crop</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Moisture</th><th className="px-3 py-3">Temp.</th><th className="px-3 py-3">pH</th><th className="px-3 py-3">EC</th><th className="px-5 py-3 text-right">Updated</th></tr></thead><tbody>{rows.map((row) => <tr key={row.device} onClick={() => onSelect(row)} className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-[#f7fbf8]"><td className="px-5 py-3.5"><p className="font-medium text-slate-800">{row.plot}</p><p className="mt-0.5 text-xs text-slate-400">{row.device}</p></td><td className="px-3 py-3.5 text-slate-600">{row.crop}</td><td className="px-3 py-3.5"><StatusBadge status={row.status} /></td><td className={`px-3 py-3.5 font-medium ${row.moisture < 25 ? 'text-amber-700' : 'text-slate-700'}`}>{row.moisture}%</td><td className="px-3 py-3.5 text-slate-700">{row.temperature}°C</td><td className="px-3 py-3.5 text-slate-700">{row.ph}</td><td className="px-3 py-3.5 text-slate-700">{row.ec} <span className="text-xs text-slate-400">µS</span></td><td className="px-5 py-3.5 text-right text-xs text-slate-400">{row.updated}</td></tr>)}</tbody></table></div><div className="flex flex-col gap-2 p-3 md:hidden">{rows.map((row) => <button key={row.device} onClick={() => onSelect(row)} className="rounded-xl border border-slate-100 p-3 text-left hover:bg-slate-50"><div className="flex items-center justify-between"><div><p className="text-sm font-semibold text-slate-800">{row.plot}</p><p className="mt-0.5 text-xs text-slate-400">{row.crop} · {row.device}</p></div><StatusBadge status={row.status} /></div><div className="mt-3 grid grid-cols-4 gap-2 border-t border-slate-100 pt-3 text-xs"><div><p className="text-slate-400">Moisture</p><p className="mt-1 font-semibold text-slate-700">{row.moisture}%</p></div><div><p className="text-slate-400">Temp.</p><p className="mt-1 font-semibold text-slate-700">{row.temperature}°C</p></div><div><p className="text-slate-400">pH</p><p className="mt-1 font-semibold text-slate-700">{row.ph}</p></div><div><p className="text-slate-400">Updated</p><p className="mt-1 font-semibold text-slate-700">{row.updated}</p></div></div></button>)}</div></section>
-}
-
-function TrendChart() {
-  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"><div className="flex items-start justify-between"><div><h2 className="text-sm font-semibold text-slate-900">7-Day Soil Moisture Trend</h2><p className="mt-1 text-xs text-slate-400">North Field A1 · Soil moisture</p></div><select aria-label="Trend date range" className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-600 outline-none"><option>7 days</option><option>30 days</option><option>90 days</option></select></div><div className="mt-5 h-[210px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trendData} margin={{ top: 8, right: 4, left: -22, bottom: 0 }}><defs><linearGradient id="moistureFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#43a878" stopOpacity={0.22} /><stop offset="100%" stopColor="#43a878" stopOpacity={0.02} /></linearGradient></defs><CartesianGrid vertical={false} stroke="#edf1ef" /><XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} /><YAxis domain={[20, 40]} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(value) => `${value}%`} /><Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(15,23,42,.08)', fontSize: 12 }} formatter={(value) => [`${value}%`, 'Soil moisture']} /><Area type="monotone" dataKey="moisture" stroke="#25865a" strokeWidth={2.5} fill="url(#moistureFill)" dot={{ r: 3, fill: '#25865a', strokeWidth: 2, stroke: '#fff' }} /></AreaChart></ResponsiveContainer></div></section>
-}
-
-function AlertsPanel() {
-  const [acknowledged, setAcknowledged] = useState<string[]>([])
-  const alerts = [{ title: 'Low soil moisture', plot: 'South Field B2', detail: 'Moisture is below the configured crop threshold.', time: '12 min ago', status: 'Warning' as Status, icon: Droplets }, { title: 'Device offline', plot: 'West Orchard D1', detail: 'No new data received from device.', time: '2h 18m ago', status: 'Offline' as Status, icon: Wifi }, { title: 'Low battery', plot: 'South Field B2', detail: 'Battery is below the configured level.', time: 'Yesterday', status: 'Warning' as Status, icon: BatteryMedium }]
-  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"><div className="flex items-start justify-between"><div><h2 className="text-sm font-semibold text-slate-900">Recent Alerts</h2><p className="mt-1 text-xs text-slate-400">Prioritized by severity and time</p></div><button className="text-xs font-medium text-[#1f7a52] hover:underline">View all</button></div><div className="mt-4 flex flex-col gap-3">{alerts.map((alert) => { const Icon = alert.icon; const isAck = acknowledged.includes(alert.title); return <div key={alert.title} className={`rounded-xl border p-3 transition ${isAck ? 'border-slate-100 bg-slate-50 opacity-70' : 'border-slate-100 bg-white'}`}><div className="flex gap-3"><div className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg ${alert.status === 'Offline' ? 'bg-slate-100 text-slate-500' : 'bg-amber-50 text-amber-600'}`}><Icon className="size-4" /></div><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div><p className="text-sm font-medium text-slate-800">{alert.title}</p><p className="mt-0.5 text-xs font-medium text-slate-500">{alert.plot}</p></div><StatusBadge status={isAck ? 'Resolved' : alert.status} /></div><p className="mt-2 text-xs leading-relaxed text-slate-500">{alert.detail}</p><div className="mt-2 flex items-center justify-between"><span className="text-[11px] text-slate-400">{alert.time}</span>{!isAck && <button onClick={() => setAcknowledged((current) => [...current, alert.title])} className="text-[11px] font-semibold text-[#1f7a52] hover:underline">Acknowledge</button>}</div></div></div></div> })}</div></section>
-}
-
-function DetailView({ page, selectedReading, setPage }: { page: PageKey; selectedReading: Reading; setPage: (page: PageKey) => void }) {
-  const titles: Record<Exclude<PageKey, 'Overview'>, string> = { Farms: 'Farms', Devices: 'Devices', Readings: 'Readings', Alerts: 'Alerts', Users: 'Users', Settings: 'Settings' }
-  const data = page === 'Farms' ? readings.map((r) => ({ label: r.plot, meta: `${r.crop} · ${r.device}`, status: r.status, value: `${r.moisture}% moisture`, sub: `${r.updated}` })) : page === 'Devices' ? readings.map((r) => ({ label: r.device, meta: `${r.farm} · ${r.plot}`, status: r.status, value: `${r.battery}% battery`, sub: `${r.signal} · ${r.updated}` })) : page === 'Readings' ? readings.map((r) => ({ label: r.plot, meta: `${r.crop} · ${r.device}`, status: r.status, value: `${r.moisture}% · ${r.temperature}°C · pH ${r.ph}`, sub: `EC ${r.ec} µS/cm · ${r.updated}` })) : page === 'Alerts' ? [{ label: 'Low soil moisture', meta: 'South Field B2 · SG-JOS-002', status: 'Warning' as Status, value: 'Current 18.2% · Threshold 25%', sub: '12 min ago' }, { label: 'Device offline', meta: 'West Orchard D1 · SG-JOS-004', status: 'Offline' as Status, value: 'No new data', sub: '2h 18m ago' }] : page === 'Users' ? [{ label: 'Amina Musa', meta: 'amina@greeneden.farm', status: 'Online' as Status, value: 'Farm Manager', sub: 'Active now' }, { label: 'David Okafor', meta: 'david@greeneden.farm', status: 'Online' as Status, value: 'Agronomist', sub: '12 min ago' }, { label: 'Grace Bello', meta: 'grace@greeneden.farm', status: 'Offline' as Status, value: 'Technician', sub: 'Yesterday' }] : []
-  if (page === 'Settings') return <SettingsPage />
-  return <div className="flex flex-col gap-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-[#2b8b61]">Green Eden Farms</p><h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{titles[page as Exclude<PageKey, 'Overview'>]}</h1><p className="mt-1 text-sm text-slate-500">Monitor and manage your {page.toLowerCase()} across the organization.</p></div><div className="flex gap-2"><button className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Export CSV</button><button className="rounded-xl bg-[#1f7a52] px-3 py-2 text-xs font-semibold text-white hover:bg-[#176b46]">Add {page === 'Farms' ? 'farm' : page === 'Devices' ? 'device' : 'user'}</button></div></div><div className="grid gap-4 md:grid-cols-3"><MetricCard title={page === 'Alerts' ? 'Open Alerts' : page === 'Users' ? 'Team members' : 'Total records'} value={page === 'Alerts' ? '3' : page === 'Users' ? '8' : String(data.length)} subtitle="Across Green Eden Farms" icon={page === 'Alerts' ? AlertTriangle : page === 'Users' ? Users : ClipboardList} tone="bg-[#d8f2b1] text-[#245e3e] ring-4 ring-[#eef9de]" /><MetricCard title="Needs attention" value={page === 'Alerts' ? '2' : '2'} subtitle="Review recommended" icon={AlertTriangle} tone="bg-[#ffe4a8] text-[#9a5b08] ring-4 ring-[#fff4d7]" /><MetricCard title="Last sync" value="2 min" subtitle="All systems operational" icon={Activity} tone="bg-[#dbe8e4] text-[#356b59] ring-4 ring-[#f0f6f2]" /></div><div className="rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="flex items-center gap-3 border-b border-slate-100 p-4"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><input aria-label={`Search ${page}`} placeholder={`Search ${page.toLowerCase()}...`} className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm outline-none focus:border-[#7dbb98]" /></div><button className="rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:bg-slate-50"><SlidersHorizontal className="size-4" /></button></div><div className="divide-y divide-slate-100">{data.map((item) => <div key={item.label} className="flex flex-wrap items-center gap-3 px-4 py-4 transition hover:bg-slate-50"><div className="flex min-w-[220px] flex-1 items-center gap-3"><div className="flex size-9 items-center justify-center rounded-xl bg-[#eaf6ef] text-[#1f7a52]"><Sprout className="size-4" /></div><div><p className="text-sm font-semibold text-slate-800">{item.label}</p><p className="mt-0.5 text-xs text-slate-400">{item.meta}</p></div></div><div className="min-w-[130px]"><StatusBadge status={item.status} /></div><div className="min-w-[170px] text-sm text-slate-700">{item.value}</div><div className="min-w-[100px] text-right text-xs text-slate-400">{item.sub}</div><button aria-label={`Open ${item.label}`} onClick={() => setPage(page === 'Farms' ? 'Overview' : page)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><ChevronRight className="size-4" /></button></div>)}</div></div>{page === 'Farms' && <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><h2 className="text-sm font-semibold text-slate-900">Farm detail preview</h2><p className="mt-1 text-xs text-slate-400">North Field A1 selected from Green Eden Farm</p></div><button onClick={() => setPage('Overview')} className="text-xs font-semibold text-[#1f7a52]">Open plot detail</button></div><div className="mt-4 grid gap-3 sm:grid-cols-4">{[['Soil moisture', `${selectedReading.moisture}%`, Droplets], ['Temperature', `${selectedReading.temperature}°C`, Thermometer], ['pH', String(selectedReading.ph), Gauge], ['EC', `${selectedReading.ec} µS/cm`, Zap]].map(([label, value, Icon]) => <div key={String(label)} className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">{label as string}</p><p className="mt-2 text-lg font-semibold text-slate-800">{value as string}</p></div>)}</div></div>}</div>
-}
-
-function SettingsView() {
-  return <div className="flex flex-col gap-5"><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-[#2b8b61]">Administration</p><h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Settings</h1><p className="mt-1 text-sm text-slate-500">Configure your organization and monitoring thresholds.</p></div>{[['Organization', 'Green Eden Farms', 'Abuja, Nigeria'], ['Threshold profiles', 'Soil moisture · 25% minimum', 'pH range · 5.5 – 7.5'], ['Reporting', 'Measurement interval · 15 minutes', 'Upload interval · 15 minutes'], ['Notifications', 'Email alerts enabled', 'Critical alerts · Immediate']].map(([title, first, second]) => <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><h2 className="text-sm font-semibold text-slate-900">{title}</h2><p className="mt-1 text-xs text-slate-400">{first}</p></div><button className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">Edit</button></div><div className="mt-4 rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-600">{second}</div></div>)}</div>
-}
-
-export default function ScareGrowDashboard({ initialPage = 'Overview', alertId }: { initialPage?: PageKey; alertId?: string }) {
-  const [page, setPage] = useState<PageKey>(initialPage)
+  const [profile, setProfile] = useState<CurrentProfile | null>(null)
+  useEffect(() => { getCurrentProfile().then(setProfile).catch((error) => setLoadError(error.message)) }, [])
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [selectedPlot, setSelectedPlot] = useState(readings[0])
-  const filteredRows = useMemo(() => { const query = search.trim().toLowerCase(); if (!query) return readings; return readings.filter((row) => [row.plot, row.farm, row.crop, row.device, row.status].some((value) => value.toLowerCase().includes(query))) }, [search])
-  const goTo = (next: PageKey) => { setPage(next); setMobileOpen(false) }
-  return <div className="flex min-h-screen bg-[linear-gradient(135deg,#edf8ee_0%,#f8f4ea_52%,#edf2f8_100%)] text-slate-900"><Sidebar active={page} setActive={goTo} collapsed={collapsed} setCollapsed={setCollapsed} />{mobileOpen && <div className="fixed inset-0 z-40 bg-slate-900/20 lg:hidden" onClick={() => setMobileOpen(false)}><div className="h-full w-[255px] bg-[#123d2d] text-white shadow-xl [&_p:first-child]:text-white [&_p:last-child]:text-white/60" onClick={(e) => e.stopPropagation()}><div className="flex h-[76px] items-center justify-between border-b border-white/10 px-5"><BrandMark /><button aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white"><X className="size-5" /></button></div><nav className="flex flex-col gap-1 p-4">{navItems.map(({ label, icon: Icon }) => <button key={label} onClick={() => goTo(label)} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${page === label ? 'bg-[#b9e878] text-[#123d2d] shadow-sm' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}><Icon className="size-4" />{label}{label === 'Alerts' && <span className="ml-auto flex size-5 items-center justify-center rounded-full bg-red-400/90 text-[10px] font-semibold text-white">3</span>}</button>)}</nav></div></div>}<div className="flex min-w-0 flex-1 flex-col"><Header active={page} search={search} setSearch={setSearch} setMobileOpen={setMobileOpen} /><main className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-8 lg:pb-8">{page === 'Farms' ? <FarmsPage /> : page === 'Devices' ? <DevicesPage /> : page === 'Readings' ? <ReadingsPage /> : page === 'Alerts' ? alertId ? <AlertDetail alertId={alertId} /> : <AlertsPage /> : page === 'Users' ? <UsersPage /> : page === 'Overview' ? <div className="flex flex-col gap-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-[#2b8b61]">Tuesday, September 16, 2026</p><h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px]">Good morning, Amina</h1><p className="mt-1 text-sm text-slate-500">Here is what is happening across Green Eden Farm.</p></div><button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"><Map className="size-4 text-[#1f7a52]" />Green Eden Farm<ChevronDown className="size-4 text-slate-400" /></button></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><MetricCard title="Active devices" value="12" subtitle="Online devices · +2 since yesterday" icon={Wifi} tone="bg-[#d8f2b1] text-[#245e3e] ring-4 ring-[#eef9de]" /><MetricCard title="Offline devices" value="2" subtitle="Needs attention · last seen 2h ago" icon={Signal} tone="bg-[#dbe8e4] text-[#356b59] ring-4 ring-[#f0f6f2]" /><MetricCard title="Open alerts" value="3" subtitle="2 warning · 1 critical" icon={AlertTriangle} tone="bg-[#ffe4a8] text-[#9a5b08] ring-4 ring-[#fff4d7]" /><MetricCard title="Low battery" value="4" subtitle="Below configured battery level" icon={BatteryMedium} tone="bg-red-50 text-red-600" /></div><div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.8fr)]"><FarmMap selectedPlot={selectedPlot} setSelectedPlot={setSelectedPlot} /><div className="flex flex-col gap-5"><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between"><div><h2 className="text-sm font-semibold text-slate-900">Current conditions</h2><p className="mt-1 text-xs text-slate-400">{selectedPlot.plot} · {selectedPlot.updated}</p></div><CloudSun className="size-5 text-[#1f7a52]" /></div><div className="mt-5 flex items-end gap-2"><p className="text-4xl font-semibold tracking-tight text-slate-900">26°C</p><p className="pb-1 text-xs text-slate-400">field temperature</p></div><div className="mt-5 grid grid-cols-3 divide-x divide-slate-100 rounded-xl bg-slate-50 py-3 text-center"><div><Droplets className="mx-auto size-4 text-[#1f7a52]" /><p className="mt-1 text-xs text-slate-400">Humidity</p><p className="mt-1 text-sm font-semibold">35%</p></div><div><CloudSun className="mx-auto size-4 text-amber-500" /><p className="mt-1 text-xs text-slate-400">Forecast</p><p className="mt-1 text-sm font-semibold">Sunny</p></div><div><Activity className="mx-auto size-4 text-slate-500" /><p className="mt-1 text-xs text-slate-400">Wind</p><p className="mt-1 text-sm font-semibold">8 m/s</p></div></div></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><h2 className="text-sm font-semibold text-slate-900">Device connectivity</h2><p className="mt-1 text-xs text-slate-400">Last sync across the farm</p></div><ShieldCheck className="size-5 text-[#1f7a52]" /></div><div className="mt-4 flex items-center gap-4"><div className="relative flex size-16 items-center justify-center rounded-full border-[6px] border-emerald-100"><span className="text-lg font-semibold text-slate-800">86%</span></div><div><p className="text-sm font-medium text-slate-800">Mostly online</p><p className="mt-1 text-xs leading-relaxed text-slate-400">12 online · 2 offline<br />Last update 2 min ago</p></div></div></div></div></div><ReadingsTable rows={filteredRows} onSelect={setSelectedPlot} /><div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]"><TrendChart /><AlertsPanel /></div></div> : <DetailView page={page} selectedReading={selectedPlot} setPage={goTo} />}</main><nav aria-label="Mobile navigation" className="fixed inset-x-4 bottom-3 z-30 flex h-[68px] items-center justify-around rounded-2xl bg-[#123d2d] px-2 shadow-[0_12px_30px_rgba(18,61,45,0.28)] lg:hidden">{navItems.slice(0, 5).map(({ label, icon: Icon }) => <button key={label} onClick={() => goTo(label)} aria-label={label} className={`flex min-w-14 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold transition-colors ${page === label ? 'bg-[#b9e878] text-[#123d2d]' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}><Icon className="size-[19px]" strokeWidth={2.6} />{label === 'Overview' ? 'Home' : label}</button>)}</nav><nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur lg:hidden">{navItems.slice(0, 5).map(({ label, icon: Icon }) => <button key={label} onClick={() => goTo(label)} className={`flex flex-1 flex-col items-center gap-1 rounded-lg py-1.5 text-[10px] font-medium ${page === label ? 'text-[#1f7a52]' : 'text-slate-400'}`}><Icon className="size-[18px]" />{label === 'Overview' ? 'Home' : label}</button>)}</nav></div></div>
+  const [readings, setReadings] = useState<Reading[]>([])
+  const [mapDevices, setMapDevices] = useState<MapDevice[]>([])
+  const [selectedPlot, setSelectedPlot] = useState<Reading | null>(null)
+  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [trend, setTrend] = useState<{ day: string; moisture: number }[]>([])
+  const [summary, setSummary] = useState({ onlineDevices: 0, offlineDevices: 0, openAlerts: 0, lowBatteryDevices: null as number | null })
+  const [loadError, setLoadError] = useState('')
+  useEffect(() => {
+    if (activePage !== 'Overview') return
+    getMapDevices().then(setMapDevices).catch((error) => setLoadError(error.message))
+    Promise.all([getReadings({ limit: 10 }), getAlerts({ status: 'open', limit: 5 }), getMoistureTrend('SG-JOS-001')])
+      .then(([rows, alertRows, trendRows]) => {
+        const mapped = rows.map(toReading)
+        setReadings(mapped)
+        setSelectedPlot(mapped[0] ?? null)
+        setAlerts(alertRows.map(toAlert))
+        setTrend(trendRows.map((row) => ({ day: new Date(String(row.measured_at)).toLocaleDateString(), moisture: Number(row.moisture_pct ?? 0) })))
+      })
+      .catch((error) => setLoadError(error.message))
+  }, [activePage])
+
+  // The summary also supplies the shared navigation alert count.
+  useEffect(() => {
+    getDashboardSummary().then(setSummary).catch((error) => setLoadError(error.message))
+  }, [])
+
+  const [activeAlertId, setActiveAlertId] = useState<string | undefined>(alertId)
+  const [activeDeviceId, setActiveDeviceId] = useState<string | undefined>(deviceId)
+
+
+  const handleNavigate = (page: PageKey, path: string) => {
+    setActiveAlertId(undefined)
+    setActiveDeviceId(undefined)
+    setMobileOpen(false)
+    router.push(path)
+  }
+
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) return readings
+    return readings.filter((row) => [row.plot, row.farm, row.crop, row.device, row.status].some((value) => value.toLowerCase().includes(query)))
+  }, [search, readings])
+
+  return (
+    <div className="flex min-h-screen bg-[linear-gradient(135deg,#edf8ee_0%,#f8f4ea_52%,#edf2f8_100%)] text-slate-900">
+      <Sidebar active={activePage} onNavigate={handleNavigate} collapsed={collapsed} setCollapsed={setCollapsed} profile={profile} openAlerts={summary.openAlerts} />
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 bg-slate-900/20 lg:hidden" onClick={() => setMobileOpen(false)}>
+          <div className="h-full w-[255px] bg-[#123d2d] text-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex h-[76px] items-center justify-between border-b border-white/10 px-5">
+              <BrandMark />
+              <button aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white">
+                <X className="size-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Header active={activePage} search={search} setSearch={setSearch} setMobileOpen={setMobileOpen} profile={profile} />
+
+        <main className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-8 lg:pb-8">
+          {loadError && <p role="alert" className="mb-4 text-sm text-red-700">{loadError}</p>}
+          {activePage === 'Farms' ? (
+            farmId ? <FarmDetailPage farmId={farmId} /> : <FarmsPage />
+          ) : activePage === 'Devices' ? (
+            <DevicesPage selectedDeviceId={activeDeviceId ?? deviceId} onSelectDevice={(id) => setActiveDeviceId(id ?? undefined)} />
+          ) : activePage === 'Readings' ? (
+            <ReadingsPage />
+          ) : activePage === 'Alerts' ? (
+            activeAlertId ?? alertId ? (
+              <AlertDetail alertId={activeAlertId ?? alertId!} onBack={() => setActiveAlertId(undefined)} />
+            ) : (
+              <AlertsPage onSelectAlert={(id) => setActiveAlertId(id)} />
+            )
+          ) : activePage === 'Users' ? (
+            <UsersPage />
+          ) : activePage === 'Settings' ? (
+            <SettingsPage />
+          ) : (
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#2b8b61]">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px]">Good morning, {profile?.name?.split(' ')[0] ?? 'there'}</h1>
+                
+                </div>
+                <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+                  <Map className="size-4 text-[#1f7a52]" />Green Eden Farm<ChevronDown className="size-4 text-slate-400" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                <MetricCard title="Active devices" value={String(summary.onlineDevices)} subtitle="Online devices" icon={Wifi} tone="bg-[#d8f2b1] text-[#245e3e] ring-4 ring-[#eef9de]" />
+                <MetricCard title="Offline devices" value={String(summary.offlineDevices)} subtitle="Needs attention" icon={Signal} tone="bg-[#dbe8e4] text-[#356b59] ring-4 ring-[#f0f6f2]" />
+                <MetricCard title="Open alerts" value={String(summary.openAlerts)} subtitle="Open alerts" icon={AlertTriangle} tone="bg-[#ffe4a8] text-[#9a5b08] ring-4 ring-[#fff4d7]" />
+                <MetricCard title="Low battery" value={summary.lowBatteryDevices == null ? "—" : String(summary.lowBatteryDevices)} subtitle="Threshold not configured" icon={BatteryMedium} tone="bg-red-50 text-red-600" />
+              </div>
+
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.8fr)]">
+                <FarmMap readings={readings} devices={mapDevices} selectedPlot={selectedPlot} setSelectedPlot={setSelectedPlot} onNavigate={handleNavigate} />
+                <div className="flex flex-col gap-5">
+                  {selectedPlot && <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h2 className="text-sm font-semibold text-slate-900">Current conditions</h2>
+                        <p className="mt-1 text-xs text-slate-400">{selectedPlot.plot} · {selectedPlot.updated}</p>
+                      </div>
+                      <CloudSun className="size-5 text-[#1f7a52]" />
+                    </div>
+                    <div className="mt-5 flex items-end gap-2">
+                      <p className="text-4xl font-semibold tracking-tight text-slate-900">{selectedPlot.temperature}°C</p>
+                      <p className="pb-1 text-xs text-slate-400">field temperature</p>
+                    </div>
+                    <div className="mt-5 grid grid-cols-3 divide-x divide-slate-100 rounded-xl bg-slate-50 py-3 text-center">
+                      <div>
+                        <Droplets className="mx-auto size-4 text-[#1f7a52]" />
+                        <p className="mt-1 text-xs text-slate-400">Humidity</p>
+                        <p className="mt-1 text-sm font-semibold">—</p>
+                      </div>
+                      <div>
+                        <CloudSun className="mx-auto size-4 text-amber-500" />
+                        <p className="mt-1 text-xs text-slate-400">Forecast</p>
+                        <p className="mt-1 text-sm font-semibold">—</p>
+                      </div>
+                      <div>
+                        <Activity className="mx-auto size-4 text-slate-500" />
+                        <p className="mt-1 text-xs text-slate-400">Wind</p>
+                        <p className="mt-1 text-sm font-semibold">—</p>
+                      </div>
+                    </div>
+                  </div>}
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-sm font-semibold text-slate-900">Device connectivity</h2>
+                        <p className="mt-1 text-xs text-slate-400">Last sync across the farm</p>
+                      </div>
+                      <ShieldCheck className="size-5 text-[#1f7a52]" />
+                    </div>
+                    <div className="mt-4 flex items-center gap-4">
+                      <div className="relative flex size-16 items-center justify-center rounded-full border-[6px] border-emerald-100">
+                        <span className="text-lg font-semibold text-slate-800">{summary.onlineDevices + summary.offlineDevices ? Math.round(summary.onlineDevices / (summary.onlineDevices + summary.offlineDevices) * 100) : 0}%</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">Mostly online</p>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-400">{summary.onlineDevices} online · {summary.offlineDevices} offline</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <ReadingsTable rows={filteredRows} onSelect={setSelectedPlot} />
+
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+                <TrendChart trendData={trend} />
+                <AlertsPanel alerts={alerts} onNavigate={handleNavigate} />
+              </div>
+            </div>
+          )}
+        </main>
+
+        <MobileNav activePage={activePage} onNavigate={handleNavigate} />
+      </div>
+    </div>
+  )
 }

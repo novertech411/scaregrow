@@ -1,29 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { AlertTriangle, MapPin, Plus, Search } from 'lucide-react'
-
-type FarmStatus = 'Online' | 'Warning' | 'Critical' | 'Offline'
-
-type Farm = {
-  id: string
-  name: string
-  location: string
-  plots: number
-  totalDevices: number
-  onlineDevices: number
-  offlineDevices: number
-  openAlerts: number
-  lastUpdate: string
-  status: FarmStatus
-}
-
-const farmsData: Farm[] = [
-  { id: 'gef', name: 'Green Eden Farm', location: 'Jos, Plateau State', plots: 12, totalDevices: 8, onlineDevices: 7, offlineDevices: 1, openAlerts: 3, lastUpdate: '2 min ago', status: 'Warning' },
-  { id: 'nvf', name: 'North Valley Farm', location: 'Kaduna, Kaduna State', plots: 8, totalDevices: 6, onlineDevices: 6, offlineDevices: 0, openAlerts: 0, lastUpdate: '1 min ago', status: 'Online' },
-  { id: 'sdf', name: 'Sunrise Demonstration Farm', location: 'Kano, Kano State', plots: 15, totalDevices: 10, onlineDevices: 9, offlineDevices: 1, openAlerts: 1, lastUpdate: '5 min ago', status: 'Warning' },
-  { id: 'jrp', name: 'Jos Research Plot', location: 'Jos, Plateau State', plots: 6, totalDevices: 4, onlineDevices: 4, offlineDevices: 0, openAlerts: 0, lastUpdate: '3 min ago', status: 'Online' },
-]
+import Link from 'next/link'
+import type { Farm, FarmStatus } from '@/lib/types'
+import { getFarms } from '@/lib/services/farms'
+import { toFarm } from '@/lib/services/presenters'
 
 function statusColor(status: FarmStatus) {
   if (status === 'Online') return 'bg-[#d8f2b1] text-[#245e3e] border-[#b9e5c7]'
@@ -53,16 +35,39 @@ function FarmsTable({ farms }: { farms: Farm[] }) {
               <tr key={farm.id} className="group transition-colors hover:bg-[#fbfdf9]">
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-9 items-center justify-center rounded-xl bg-[#e6f4d8] text-[#1f7a52]"><MapPin className="size-4" strokeWidth={2.4} /></div>
-                    <div><p className="text-sm font-semibold text-slate-900">{farm.name}</p><p className="mt-0.5 text-xs text-slate-500">{farm.location}</p></div>
+                    <div className="flex size-9 items-center justify-center rounded-xl bg-[#e6f4d8] text-[#1f7a52]">
+                      <MapPin className="size-4" strokeWidth={2.4} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{farm.name}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{farm.location}</p>
+                    </div>
                   </div>
                 </td>
-                <td className="px-4 py-4"><span className={`inline-flex rounded-lg border px-2.5 py-1 text-[11px] font-semibold ${statusColor(farm.status)}`}>{farm.status}</span></td>
+                <td className="px-4 py-4">
+                  <span className={`inline-flex rounded-lg border px-2.5 py-1 text-[11px] font-semibold ${statusColor(farm.status)}`}>
+                    {farm.status}
+                  </span>
+                </td>
                 <td className="px-4 py-4 text-sm font-semibold text-slate-800">{farm.plots}</td>
-                <td className="px-4 py-4"><p className="text-sm font-semibold text-slate-800">{farm.totalDevices}</p><p className="mt-0.5 text-xs text-[#1f7a52]">{farm.onlineDevices} online <span className="text-slate-400">/ {farm.offlineDevices} offline</span></p></td>
-                <td className="px-4 py-4"><div className="flex items-center gap-1.5"><AlertTriangle className={`size-4 ${farm.openAlerts > 0 ? 'text-amber-600' : 'text-slate-300'}`} strokeWidth={2.3} /><span className="text-sm font-semibold text-slate-800">{farm.openAlerts}</span></div></td>
+                <td className="px-4 py-4">
+                  <p className="text-sm font-semibold text-slate-800">{farm.totalDevices}</p>
+                  <p className="mt-0.5 text-xs text-[#1f7a52]">
+                    {farm.onlineDevices} online <span className="text-slate-400">/ {farm.offlineDevices} offline</span>
+                  </p>
+                </td>
+                <td className="px-4 py-4">
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle className={`size-4 ${farm.openAlerts > 0 ? 'text-amber-600' : 'text-slate-300'}`} strokeWidth={2.3} />
+                    <span className="text-sm font-semibold text-slate-800">{farm.openAlerts}</span>
+                  </div>
+                </td>
                 <td className="px-4 py-4 text-xs text-slate-500">{farm.lastUpdate}</td>
-                <td className="px-5 py-4 text-right"><button className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1f7a52] transition hover:bg-[#e6f4d8]">View farm</button></td>
+                <td className="px-5 py-4 text-right">
+                  <Link href={`/farms/${farm.id}`} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1f7a52] transition hover:bg-[#e6f4d8]">
+                    View farm
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -73,19 +78,23 @@ function FarmsTable({ farms }: { farms: Farm[] }) {
 }
 
 export function FarmsPage() {
+  const [farms, setFarms] = useState<Farm[]>([])
+  const [loadError, setLoadError] = useState('')
+  useEffect(() => { getFarms().then((rows) => setFarms(rows.map(toFarm))).catch((error) => setLoadError(error.message)) }, [])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<FarmStatus | 'All'>('All')
 
   const filtered = useMemo(() => {
-    return farmsData.filter((farm) => {
+    return farms.filter((farm) => {
       const matchesSearch = farm.name.toLowerCase().includes(search.toLowerCase()) || farm.location.toLowerCase().includes(search.toLowerCase())
       const matchesStatus = statusFilter === 'All' || farm.status === statusFilter
       return matchesSearch && matchesStatus
     })
-  }, [search, statusFilter])
+  }, [farms, search, statusFilter])
 
   return (
     <div className="flex flex-col gap-6">
+      {loadError && <p role="alert" className="text-sm text-red-700">{loadError}</p>}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Farms</h1>
