@@ -36,32 +36,24 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-svh bg-white md:grid-cols-2">
-      <section aria-label="Grow with Greener" className="relative isolate flex min-h-[240px] flex-col justify-end overflow-hidden bg-[#123d2d] px-6 py-8 sm:px-10 md:min-h-svh md:p-12 lg:p-16">
-        <img
-          src="/images/login.webp"
-          srcSet="/images/login-mobile.webp 640w, /images/login.webp 1280w"
-          sizes="(min-width: 768px) 50vw, 100vw"
-          width={1280}
-          height={839}
-          alt=""
-          fetchPriority="high"
-          className="absolute inset-0 -z-20 h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#09281f]/95 via-[#123d2d]/30 to-transparent" aria-hidden="true" />
-        <div className="max-w-md text-white">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#d8f2b1]">Rooted in better farming</p>
-          <h2 className="text-3xl font-semibold leading-tight tracking-tight lg:text-5xl">Know your soil.<br />Grow with confidence.</h2>
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/80">Keep a closer eye on your fields, spot changes early, and give every crop the care it needs.</p>
-        </div>
-      </section>
-      <section aria-label="Sign in to Greener" className="flex items-center justify-center bg-white px-6 py-10 sm:px-10 md:py-16">
-      <div className="w-full max-w-[380px] bg-white">
+    <main className="relative isolate flex min-h-svh items-center justify-center overflow-hidden bg-[#123d2d] p-4 sm:p-6 lg:justify-end lg:p-10">
+      <img
+        src="/images/login.webp"
+        srcSet="/images/login-mobile.webp 640w, /images/login.webp 1280w"
+        sizes="100vw"
+        width={1280}
+        height={839}
+        alt=""
+        fetchPriority="high"
+        className="absolute inset-0 -z-20 h-full w-full object-cover"
+      />
+      <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(18,61,45,.16),rgba(18,61,45,.46)_48%,rgba(18,61,45,.84))]" aria-hidden="true" />
+      <section aria-label="Sign in to Greener" className="w-full max-w-[420px] rounded-[24px] border border-white/60 bg-white/95 p-6 shadow-[0_24px_80px_rgba(8,35,24,.3)] backdrop-blur sm:p-7 lg:mr-[5vw]">
         <div className="mb-5 flex items-center gap-2.5">
           <img src="/images/icon.png" alt="Logo" className="size-6" />
           <p className="text-lg font-bold tracking-tight text-[#123d2d]">Greener</p>
         </div>
-        
+
         <div className="mb-5">
           <h1 className="text-2xl font-bold tracking-tight text-[#123d2d]">Sign in</h1>
           <p className="mt-1 text-xs text-slate-500">Monitor field conditions and farm intelligence.</p>
@@ -108,7 +100,6 @@ export default function LoginPage() {
             Sign up
           </Link>
         </p>
-      </div>
       </section>
     </main>
   )
