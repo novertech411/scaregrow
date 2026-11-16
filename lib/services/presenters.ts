@@ -45,5 +45,5 @@ export function toNotification(row: Row): NotificationItem {
 export function toUser(row: Row): UserRecord {
   const name = label(row.full_name, 'Unnamed user')
   const role = String(row.role ?? '').toLowerCase()
-  return { id: Number(row.id) || 0, name, email: label(row.email, '—'), role: role === 'administrator' ? 'Administrator' : role === 'farm_manager' ? 'Farm Manager' : role === 'agronomist' ? 'Agronomist' : role === 'technician' ? 'Technician' : 'Viewer', access: 'All farms', status: 'Active', lastActive: since(row.last_active), initials: name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase() }
+  return { id: String(row.id), name, email: label(row.email, '—'), role: role === 'admin' || role === 'administrator' ? 'Administrator' : role === 'farm_manager' ? 'Farm Manager' : role === 'agronomist' ? 'Agronomist' : role === 'technician' ? 'Technician' : 'Viewer', access: 'All farms', status: 'Active', lastActive: since(row.last_active), initials: name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase() }
 }

@@ -87,14 +87,14 @@ export function UsersPage() {
     ),
   [users, query, role, status])
 
-  const [invite, setInvite] = useState<UserRecord>({ id: 0, name: '', email: '', role: 'Viewer', access: 'Green Eden Farm', status: 'Pending', lastActive: 'Not active yet', initials: '' })
+  const [invite, setInvite] = useState<UserRecord>({ id: '', name: '', email: '', role: 'Viewer', access: 'Green Eden Farm', status: 'Pending', lastActive: 'Not active yet', initials: '' })
 
   const saveInvite = () => {
     const name = invite.name.trim()
     if (!name || !invite.email.trim()) return
     setInviteOpen(false)
     setNotice('User invitations require authentication and are not available yet.')
-    setInvite({ id: 0, name: '', email: '', role: 'Viewer', access: 'Green Eden Farm', status: 'Pending', lastActive: 'Not active yet', initials: '' })
+    setInvite({ id: '', name: '', email: '', role: 'Viewer', access: 'Green Eden Farm', status: 'Pending', lastActive: 'Not active yet', initials: '' })
     setTimeout(() => setNotice(''), 3000)
   }
 

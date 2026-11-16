@@ -27,6 +27,11 @@ export async function proxy(request: NextRequest) {
   const onAuthPage = ['/login', '/signup'].includes(request.nextUrl.pathname)
 
   if ((!user || error) && !onAuthPage) {
+    if (request.nextUrl.pathname.startsWith('/api/assistant/')) {
+      const unauthorized = NextResponse.json({ error: 'Please sign in to use Greener Assistant.' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
+      response.cookies.getAll().forEach((cookie) => unauthorized.cookies.set(cookie))
+      return unauthorized
+    }
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.search = ''

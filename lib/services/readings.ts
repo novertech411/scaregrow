@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
+import { READINGS_PAGE_SIZE } from '@/lib/readings-constants'
 
-export const READINGS_PAGE_SIZE = 10
+export { READINGS_PAGE_SIZE }
 
 export type ReadingFilters = {
   farmName?: string
@@ -32,7 +33,7 @@ function readingsQuery(options: ReadingFilters, countOnly = false) {
   const farmJoin = options.farmName ? 'farms!inner' : 'farms'
   const plotJoin = options.plotName ? 'plots!inner' : 'plots'
   let query = createClient().from('readings')
-    .select(countOnly && !options.farmName && !options.plotName ? '*' : `*, device:${deviceJoin} (id, status, farm:${farmJoin} (id, name), plot:${plotJoin} (id, name, crop))`, countOnly ? { count: 'exact', head: true } : {})
+    .select(countOnly && !options.farmName && !options.plotName ? '*' : `*, device:${deviceJoin} (id:device_id, status, farm:${farmJoin} (id, name), plot:${plotJoin} (id, name, crop))`, countOnly ? { count: 'exact', head: true } : {})
     .eq('is_valid', true)
   if (options.farmName) query = query.eq('device.farm.name', options.farmName)
   if (options.plotName) query = query.eq('device.plot.name', options.plotName)
@@ -94,8 +95,8 @@ export function getReadingPlots(farmName?: string) {
 export function getReadingDevices(farmName?: string, plotName?: string) {
   return lookupValues((offset) => {
     let query = createClient().from('devices')
-      .select(`id, farm:farms${farmName ? '!inner' : ''}(name), plot:plots${plotName ? '!inner' : ''}(name)`)
-      .order('id')
+      .select(`id:device_id, farm:farms${farmName ? '!inner' : ''}(name), plot:plots${plotName ? '!inner' : ''}(name)`)
+      .order('device_id')
     if (farmName) query = query.eq('farm.name', farmName)
     if (plotName) query = query.eq('plot.name', plotName)
     return query.range(offset, offset + 999).returns<Record<string, unknown>[]>()

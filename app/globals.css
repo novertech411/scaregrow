@@ -63,3 +63,22 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+.greener-assistant-preview {
+  transform-origin: bottom right;
+  transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1), transform 160ms cubic-bezier(0.23, 1, 0.32, 1), display 160ms allow-discrete;
+  opacity: 1;
+  transform: translateY(0);
+}
+.greener-assistant-preview[hidden] { display: none; opacity: 0; transform: translateY(6px); }
+@starting-style {
+  .greener-assistant-preview { opacity: 0; transform: translateY(6px); }
+}
+.greener-assistant-trigger { transition: transform 125ms ease, background-color 125ms ease; }
+.greener-assistant-trigger:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  .greener-assistant-trigger:hover { transform: scale(1.03); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .greener-assistant-preview, .greener-assistant-preview[hidden], .greener-assistant-trigger:hover, .greener-assistant-trigger:active { transform: none; }
+}

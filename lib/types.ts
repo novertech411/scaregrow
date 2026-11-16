@@ -73,7 +73,7 @@ export type Alert = {
 }
 
 export type UserRecord = {
-  id: number
+  id: string
   name: string
   email: string
   role: Role

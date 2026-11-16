@@ -1,0 +1,15 @@
+# Greener readings assistant
+
+The expandable panel in `components/assistant/readings-assistant.tsx` sends only the existing page filters (farm/plot names, device ID, fixed ISO date window), page number, selected metric, and local conversation to `POST /api/assistant/readings`. No browser-supplied measurements or alert classifications are trusted.
+
+The route authenticates the session, validates and bounds input, then uses the cookie-authenticated Supabase client and existing RLS to retrieve the same ten valid readings and stable ordering as the table. `build-reading-context.ts` normalizes actual moisture, temperature, pH, and EC metrics, preserving nulls and per-device identities. Farm/plot names are filters, not fabricated IDs; returned entity IDs come from database joins. Multiple farms or plots with the same name retain the table's name-based filter semantics.
+
+Plot `threshold_configurations` are retrieved through the relationship already used by the farm service. Their schema is not generated in this repository, so configurations remain raw records rather than invented ranges. Current open alerts are fetched for the selected farm/plot/device, regardless of the historical date range, capped at 50 with an explicit truncation flag. Optional query failures are marked unavailable, never reported as no alerts. Thresholds are scoped to plots represented on the current page.
+
+`build-system-prompt.ts` restricts explanations to supplied context, distinguishes observations and checks, and treats stored alert severity, status, and persistence decisions as authoritative. This feature does not calculate new alert classifications or change any database state. AI output is advisory, not a source of truth.
+
+`provider.ts` is the only OpenAI-specific module. Set **OPENAI_API_KEY** in server deployment configuration; optionally set **OPENAI_MODEL** (default `gpt-4o-mini`, compatible with Chat Completions). No SDK or client-side credential is needed. Without a key, the panel shows a configuration error instead of simulated AI output. Provider requests time out after 30 seconds; secrets and upstream error bodies are never returned to the browser. Real readings will be transmitted to OpenAI when enabled; review organizational data-sharing requirements before deployment.
+
+Conversation is local, bounded to recent turns, and resets when filters, dates, page, or metric change, or when the panel closes. In-flight requests are aborted on reset. The panel displays the server-reported number of analyzed readings and includes a New conversation control. Oversized model replies are dropped with their complete turns before subsequent requests so request validation remains usable. The dashboard launcher navigates to `/readings?assistant=open` without changing the existing plot query parameter handling.
+
+Before high-volume deployment, add a shared per-user rate limiter and provider budget controls at the API gateway; there is no distributed rate-limit infrastructure in this repository. Authentication, input limits, bounded queries/history/output, and timeouts are implemented here.

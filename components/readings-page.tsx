@@ -6,6 +6,7 @@ import { Download, X } from 'lucide-react'
 import type { Reading } from '@/lib/types'
 import { getReadings, getReadingsCount, getReadingFarms, getReadingPlots, getReadingDevices, getReadingsForExport, READINGS_PAGE_SIZE, type ReadingFilters } from '@/lib/services/readings'
 import { allMetricsChart, readingSeries as series, toPageReading, readingsCsv, readingsCsvFilename, type PageReading, type Parameter } from '@/lib/readings-view'
+import { ReadingsAssistant } from '@/components/assistant/readings-assistant'
 
 function Status({ status }: { status: Reading['status'] }) {
   return (
@@ -209,6 +210,12 @@ export function ReadingsPage() {
           </div>
         ))}
       </div>
+
+      <ReadingsAssistant
+        selection={{ ...filters, page, parameter }}
+        label={`${farm} · ${plot} · ${device} · ${range} · ${parameter} · page ${page}${loading ? '' : ` · ${readings.length} readings`}`}
+        disabled={loading || Boolean(loadError)}
+      />
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

@@ -33,11 +33,11 @@ export const mockAlerts: Alert[] = [
 ]
 
 export const mockUsers: UserRecord[] = [
-  { id: 1, name: 'Amina Musa', email: 'amina@greenedenfarms.com', role: 'Farm Manager', access: 'Green Eden Farm', status: 'Active', lastActive: 'Active now', initials: 'AM' },
-  { id: 2, name: 'John Danladi', email: 'john@greenedenfarms.com', role: 'Administrator', access: 'All farms', status: 'Active', lastActive: '12 min ago', initials: 'JD' },
-  { id: 3, name: 'David Okafor', email: 'david@greenedenfarms.com', role: 'Agronomist', access: 'North Valley Farm', status: 'Active', lastActive: '34 min ago', initials: 'DO' },
-  { id: 4, name: 'Grace Bello', email: 'grace@greenedenfarms.com', role: 'Technician', access: 'Green Eden Farm', status: 'Active', lastActive: 'Yesterday', initials: 'GB' },
-  { id: 5, name: 'Peter Adams', email: 'peter@greenedenfarms.com', role: 'Viewer', access: 'Sunrise Demonstration Farm', status: 'Pending', lastActive: 'Not active yet', initials: 'PA' },
+  { id: '1', name: 'Amina Musa', email: 'amina@greenedenfarms.com', role: 'Farm Manager', access: 'Green Eden Farm', status: 'Active', lastActive: 'Active now', initials: 'AM' },
+  { id: '2', name: 'John Danladi', email: 'john@greenedenfarms.com', role: 'Administrator', access: 'All farms', status: 'Active', lastActive: '12 min ago', initials: 'JD' },
+  { id: '3', name: 'David Okafor', email: 'david@greenedenfarms.com', role: 'Agronomist', access: 'North Valley Farm', status: 'Active', lastActive: '34 min ago', initials: 'DO' },
+  { id: '4', name: 'Grace Bello', email: 'grace@greenedenfarms.com', role: 'Technician', access: 'Green Eden Farm', status: 'Active', lastActive: 'Yesterday', initials: 'GB' },
+  { id: '5', name: 'Peter Adams', email: 'peter@greenedenfarms.com', role: 'Viewer', access: 'Sunrise Demonstration Farm', status: 'Pending', lastActive: 'Not active yet', initials: 'PA' },
 ]
 
 export const mockNotifications: NotificationItem[] = [

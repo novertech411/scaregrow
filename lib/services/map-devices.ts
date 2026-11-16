@@ -10,8 +10,8 @@ export type MapDevice = {
 export async function getMapDevices(): Promise<MapDevice[]> {
   const { data, error } = await createClient()
     .from('devices')
-    .select('id, status, farm:farms (name, latitude, longitude), plot:plots (name)')
-    .order('id')
+    .select('id:device_id, status, farm:farms (name, latitude, longitude), plot:plots (name)')
+    .order('device_id')
   if (error) throw error
   return data as MapDevice[]
 }
