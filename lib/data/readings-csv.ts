@@ -6,7 +6,7 @@ export const CSV_EXPORT_LIMIT = 50000
 export const CSV_LIMIT_MESSAGE = 'Export limited to the first 50,000 rows — narrow the date range.'
 export function csvCell(value: unknown): string {
   let text = value == null ? '' : String(value)
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`
+  if (typeof value === 'string' && /^[=+\-@\t\r]/.test(text)) text = `'${text}`
   return `"${text.replaceAll('"', '""')}"`
 }
 export function readingsCsv(rows: readonly SensorReadingRow[]): string {

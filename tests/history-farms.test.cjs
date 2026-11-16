@@ -93,6 +93,9 @@ test('CSV contains all 13 unit headers, BOM/CRLF, ISO timestamps and empty null 
 test('CSV quotes every cell, doubles quotes, and neutralizes spreadsheet formulas', () => {
   assert.equal(csv.csvCell('Farm, "North"'), '"Farm, ""North"""')
   for (const text of ['=SUM(A1)', '+123', '-value', '@cell', '\tcmd', '\rcmd']) assert.equal(csv.csvCell(text), `"'${text}"`)
+  assert.equal(csv.csvCell(-2), '"-2"')
+  assert.equal(csv.csvCell('=SUM(1)'), '"\'=SUM(1)"')
+  assert.equal(csv.csvCell('-x'), '"\'-x"')
   assert.equal(csv.csvCell(null), '""')
   assert.equal(csv.csvCell(undefined), '""')
   assert.equal(csv.readingsCsvFilename('GEF-002', new Date(2026, 10, 16)), 'greener-GEF-002-2026-11-16.csv')

@@ -1,259 +1,202 @@
 # CLAUDE.md — Greener (Green Eden farm & soil monitoring)
 
-This file guides Claude Code (and humans) working in this repository. Read it before changing code.
+Guide for Claude Code, Codex and humans working in this repo. Read it before changing code.
+**The database contract in [docs/backend-contract.md](docs/backend-contract.md) overrides anything here.**
 
 ## 1. What this project is
 
-**Greener** is a web dashboard for monitoring farms and soil conditions, built for **Green Eden Farms**
-(Nigeria — Jos, Kaduna, Kano). Field sensor nodes (ESP32 + SIM800L cellular modem + 4‑in‑1 soil probe)
-measure **soil moisture, soil temperature, pH and EC (electrical conductivity)**. Those readings are stored in
-**Supabase (Postgres)**, and this Next.js app displays them as an operational dashboard with farms, devices,
-readings, alerts, users, notifications and an AI "Greener Assistant".
-
-Intended end-to-end data flow (only the right-hand half exists today):
+**Greener** is a web dashboard for **Green Eden Farms** (Nigeria). Field sensor nodes measure soil and environment
+conditions. A backend owned by a separate engineer ingests them into **Supabase**, and this Next.js app displays them.
 
 ```
-SOIL PROBE → ESP32 → SIM800L/GPRS → INGESTION API → DATABASE → RULES/ALERT ENGINE → DASHBOARD → USERS + NOTIFICATIONS
-                                    (not built yet)  (Supabase)   (not built yet)    (this repo)
+SENSOR NODE (V1 / V2) → EMQX (V2) / ThingSpeak (V1, pending) → backend ingestion → SUPABASE → THIS APP
+                                                                (backend team)      (RLS)     (read + RPCs)
 ```
 
-The core loop the architecture should serve: **SENSE → VALIDATE → STORE → ANALYZE → ALERT → NOTIFY → ACT → RECORD HISTORY**.
-Guiding principle: **the UI is not the system — the UI is a client of the system.**
+There are two account types:
+- **Farmer:** signs up, pairs a device by its ID, and sees **only their own** devices, farms and readings.
+- **Super admin:** detected by `rpc('is_super_admin')`. Sees and manages **all** devices, farms, users, readings and the audit log.
+  Admins are granted by the backend team in SQL. There's no role screen in the app.
 
-The UI was first generated with **v0** (Vercel). It has since been wired to real Supabase data. The
-long-form product/engineering spec is [Greener_README.md](Greener_README.md). Treat it as the source of truth for
-product intent. Deployment steps are in [DEPLOYMENT.md](DEPLOYMENT.md), and the AI assistant design is in
-[lib/assistant/README.md](lib/assistant/README.md).
+Guiding principle: **the UI is a client of the system.** Security lives in Supabase RLS and RPCs, never only in the UI.
 
-## 2. Tech stack
+## 2. Who does what (working agreement)
 
-| Area | Choice |
-|---|---|
-| Framework | **Next.js 16** (App Router), **React 19**, TypeScript 5.7 (strict) |
-| Styling | **Tailwind CSS v4** (`@tailwindcss/postcss`), `tw-animate-css`, shadcn (`base-nova` style, `@base-ui/react`), `class-variance-authority`, `tailwind-merge` |
-| Icons | `lucide-react` |
-| Charts | `recharts` |
-| Maps | `leaflet` + `react-leaflet` (client-only, dynamically imported) |
-| Backend/DB/Auth | **Supabase** via `@supabase/ssr` + `@supabase/supabase-js` (anon key + Row Level Security) |
-| AI | OpenAI Chat Completions over raw `fetch` (no SDK), server-side only |
-| Analytics | `@vercel/analytics` (production only) |
-| Hosting | **Vercel** |
-| Runtime | **Node 22.x** (required — see Testing), **pnpm 12.3.4** via corepack |
-| Font | Inter, bundled locally in `app/fonts/` (no Google Fonts download at build time) |
+- The **backend engineer** owns the Supabase schema, RLS and RPCs. This repo has **no DB migrations**.
+  Their handoffs are captured in `docs/backend-contract.md`, including the open questions in §10.
+- **Claude Code** is the architect and reviewer: it writes task prompts, verifies results and maintains this file and the contract.
+- **Codex** implements. Every task report must list files, give per-task Done/Partially/Not done, and paste typecheck/test/build output.
 
-## 3. Commands
+## 3. Tech stack
+
+Next.js 16 (App Router) · React 19 · TypeScript 5.7 strict · Tailwind CSS v4 · lucide-react · recharts ·
+Supabase (`@supabase/ssr`, `@supabase/supabase-js`, anon key + RLS) · OpenAI Chat Completions via raw `fetch` (server-only, assistant) ·
+Vercel (+ `@vercel/analytics`) · **Node 22.x** · **pnpm 12.3.4** via corepack · Inter bundled in `app/fonts/`.
+`leaflet` and `react-leaflet` are still in package.json but **unused** (the map was removed).
+
+## 4. Commands
 
 ```sh
-corepack pnpm install --frozen-lockfile   # install (pnpm-lock.yaml is authoritative; ignore package-lock.json)
-corepack pnpm dev                         # dev server on http://localhost:3000
-corepack pnpm build                       # production build — uses `next build --webpack` (NOT Turbopack)
-corepack pnpm start                       # serve the production build
+corepack pnpm install --frozen-lockfile   # pnpm-lock.yaml is authoritative; never npm install
+corepack pnpm dev                         # http://localhost:3000
 corepack pnpm typecheck                   # tsc --noEmit
 corepack pnpm test                        # node --test tests/*.test.cjs
+corepack pnpm build                       # next build --webpack (not Turbopack)
 ```
 
-Run `test`, `typecheck` and `build` before deploying.
+Run all three checks before you call a task done. On this machine, put Node 22 on PATH first:
+`export PATH=$HOME/.nvm/versions/node/v22.19.0/bin:$PATH`. The system Node 18 breaks the supabase-js tests ("native WebSocket not found").
 
-## 4. Environment variables
+## 5. Environment variables
 
-Copy `.env.example` → `.env.local` (git-ignored; never commit it).
+`.env.example` → `.env.local` (git-ignored, never commit or print it).
 
-| Variable | Where used | Notes |
+| Variable | Scope | Notes |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | browser + server | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | browser + server | **Anon key only. Never a service-role key.** |
-| `OPENAI_API_KEY` | server only (`lib/assistant/provider.ts`) | Never prefix with `NEXT_PUBLIC_`. Without it, the assistant shows a "not configured" error (503). |
+| `NEXT_PUBLIC_SUPABASE_URL` | browser + server | |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | browser + server | **Anon key only. Never a service-role key anywhere.** |
+| `OPENAI_API_KEY` | server only | Assistant. Never `NEXT_PUBLIC_`. |
 | `OPENAI_MODEL` | server only | Optional, default `gpt-4o-mini` |
 
-`NEXT_PUBLIC_*` values are embedded at build time, so changing them needs a redeploy.
-
-## 5. Directory map
+## 6. Directory map
 
 ```
-app/                         Next.js App Router
-  layout.tsx                 Root layout: local Inter font, metadata/icons, Vercel Analytics
-  page.tsx                   "/" → <GreenerDashboard /> (Overview)
-  loading.tsx                Global loading UI
-  login/page.tsx             Email/password + Google sign-in
-  signup/page.tsx            Account creation (email confirmation via /auth/callback)
-  auth/callback/route.ts     Exchanges the Supabase auth code for a session cookie, then redirects
-  farms/page.tsx, farms/[farmId]/page.tsx
-  devices/page.tsx, devices/[deviceId]/page.tsx
-  readings/page.tsx          (supports ?assistant=open to open the AI panel)
-  alerts/page.tsx, alerts/[alertId]/page.tsx
-  users/page.tsx, settings/page.tsx
-  api/assistant/readings/route.ts   POST — Greener Assistant (only API route so far)
-  fonts/                     Inter-Variable.ttf + OFL license
-  globals.css                Tailwind v4 theme tokens (oklch green palette) + custom classes
-
-proxy.ts                     Next 16 "proxy" (formerly middleware): auth gate for every route
+app/
+  layout.tsx                  Font, metadata, <GreenerSessionProvider><AdminFeedbackProvider>
+  page.tsx                    "/" → GreenerDashboard (Overview)
+  login/, signup/             Auth pages (email + optional Google)
+  auth/callback/route.ts      Supabase code exchange (same-origin redirects only)
+  connect-device/page.tsx     Pair a device (pair_device RPC)
+  devices/, devices/[deviceId]/   Farmer devices list / device overview
+  readings/                   Farmer reading history + CSV
+  farms/, farms/[farmId]/     Farmer farms list / detail
+  admin/page.tsx              → /admin/devices
+  admin/[section]/page.tsx    devices | users | farms | readings | activity
+  admin/devices/[deviceId]/   Admin device detail + its audit log
+  api/assistant/readings/     POST — AI assistant (LEGACY, being rebuilt in Phase 5)
+proxy.ts                      Auth gate on every request (Next 16 "proxy" = middleware)
 
 components/
-  greener-dashboard.tsx      ★ App shell + Overview page. Every route renders this component.
-  farms-page.tsx, farm-detail-page.tsx, devices-page.tsx, readings-page.tsx,
-  alerts-page.tsx (AlertsPage + AlertDetail), users-page.tsx, settings-page.tsx
-  layout/                    sidebar.tsx (navItems), header.tsx (search + notification bell),
-                             mobile-nav.tsx, brand-mark.tsx
-  dashboard/                 metric-card, readings-table, trend-chart, alerts-panel,
-                             farm-map.tsx (wrapper) + farm-map-leaflet.tsx (Leaflet, client-only),
-                             floating-ai-assistant.tsx (Overview summary bubble)
-  assistant/                 readings-assistant.tsx (chat panel on /readings), assistant-message.tsx
-  ui/                        button.tsx (shadcn/cva), status-badge.tsx, page-loading.tsx
+  greener-dashboard.tsx       App shell (Sidebar, Header, MobileNav) wrapped in LandingGate; picks the page
+  session/                    greener-session.tsx (provider + useGreenerSession), landing-gate.tsx
+  dashboard/                  overview-page (device overview + polling), reading-panels, device-history-chart,
+                              moisture-chart, device-status-banner, device-not-found
+  devices-page.tsx, readings-page.tsx (exports HistoryContent, reused by admin), farms-page.tsx,
+  farm-detail-page.tsx, change-device-farm.tsx, connect-device-page.tsx, farms/use-owned-farms.ts
+  admin/                      Admin screens, ReasonDialog, useAdminResource, feedback (success toasts), navigation
+  layout/                     sidebar, header, mobile-nav, session-account, brand-mark
+  assistant/                  LEGACY readings chat UI (not mounted; Phase 5)
+  ui/                         button, page-loading, status-badge
 
 lib/
-  types.ts                   UI-facing domain types (Reading, Device, Farm, Alert, UserRecord, ...)
-  supabase/
-    client.ts                Browser Supabase client (createBrowserClient)
-    server.ts                Server Supabase client bound to Next cookies
-    auth.ts                  signIn / signUp / signInWithGoogle / signOut / getSession / getUser
-    profile.ts               getCurrentProfile() from `user_profiles`
-    database.types.ts        Placeholder permissive DB types (replace with `supabase gen types`)
-  services/                  ★ Data access layer — ALL Supabase queries live here
-    readings.ts              Filtered/paginated readings, count, lookups, CSV export, latest, trend
-    dashboard.ts             Overview counts (online/offline devices, open/critical alerts)
-    farms.ts, devices.ts, alerts.ts, users.ts, notifications.ts, map-devices.ts
-    presenters.ts            ★ DB row (snake_case) → UI type mappers: toDevice, toReading, toAlert, ...
-  readings-view.ts           Readings page helpers: series config, CSV builder, chart normalization
-  readings-constants.ts      READINGS_PAGE_SIZE = 10 (shared by client + server)
-  dashboard/build-ai-summary.ts   Deterministic (non-LLM) Overview status summary
-  assistant/                 Server-side AI assistant pipeline (see §8)
-  mock-data.ts               Legacy v0 mock arrays — currently NOT imported anywhere
-  utils.ts                   cn() class merger
+  supabase/                   client.ts (browser), server.ts (cookies), auth.ts, database.types.ts (hand-written from contract)
+  data/                       ★ Contract data layer: devices, farms, sensor-readings, profile, pairing, admin,
+                              presenters (toDeviceView, deviceAdminStatus), readings-csv, farm-edits
+  measurements.ts             ★ The 13 metrics: labels, units, groups, V1/V2 support, formatMeasurement/formatTimestamp
+  session/                    controller.ts (session state machine), landing.ts (resolveLanding), owned-devices.ts
+  dashboard/                  overview loading, 15 s polling, chart polling (5 min), rename
+  readings/filters.ts         Readings URL state, windows, custom-range validation
+  admin/                      navigation (sections, canAccessAdmin), actions (performAdminAction, successMessage),
+                              presenters (allowedActions, ownerLabel, auditJson)
+  assistant/                  LEGACY server pipeline (Phase 5). Still imports lib/services/readings + lib/readings-view.
+  services/readings.ts, readings-view.ts, readings-constants.ts   LEGACY, kept only for the assistant
+  types.ts                    PageKey ('Overview' | 'Farms' | 'Devices' | 'Readings')
 
-tests/                       Node built-in test runner, CommonJS (.cjs)
-docs/archive/sql-do-not-run/supabase-latest-readings.sql SQL for RPC `get_latest_readings()` (latest valid reading per device)
-docs/archive/sql-do-not-run/supabase-seed-readings.sql   Optional sample readings for SG-JOS-001/002
-public/images/               Logos, icons, login artwork
+docs/backend-contract.md      ★ Source of truth for the DB
+docs/archive/sql-do-not-run/  Obsolete SQL. NEVER run it (it would break per-farmer RLS isolation).
+tests/*.test.cjs              node:test suites (see §11)
 ```
 
-## 6. How the app works
+## 7. How the app works
 
-### 6.1 Routing & the single-shell pattern
-Every page file under `app/` is a thin wrapper that renders **`<GreenerDashboard initialPage=... farmId/deviceId/alertId=... />`**.
-`components/greener-dashboard.tsx` is a `'use client'` component that:
-- works out the active page from `usePathname()` (`/farms` → Farms and so on, falling back to `initialPage`);
-- renders the shared chrome (Sidebar, Header, MobileNav);
-- lazily loads the page component with `next/dynamic` (FarmsPage, DevicesPage, ReadingsPage, ...);
-- renders the **Overview** inline: metric cards, farm map, moisture trend, latest readings and recent alerts, plus the floating AI summary.
+### 7.1 Auth and session
+- `proxy.ts`: signed-out → `/login` (401 JSON for `/api/assistant/*`); signed-in on `/login` or `/signup` → `/`.
+- `GreenerSessionProvider` (root layout) loads **once per sign-in**: `createMyProfileIfMissing(full_name)` (non-fatal),
+  `isSuperAdmin()` (a failure puts the session in an error state, failing closed) and `listMyDevices()`. It exposes
+  `{ status, user, isAdmin, profile, devices, error, profileError, refresh() }` and clears everything on sign-out.
+- `LandingGate` + `resolveLanding()` (UX only):
+  - a farmer with 0 owned devices → `/connect-device`. `/readings` is exempt, so past-device history stays reachable.
+  - an admin with 0 owned devices on `/` → `/admin/devices`.
 
-Navigation goes through `router.push(path)` from the sidebar `navItems` (`components/layout/sidebar.tsx`).
-To add a page: add a `PageKey` in `lib/types.ts`, a nav item, a route in `app/`, a pathname branch, and a render branch in `greener-dashboard.tsx`.
+### 7.2 The ownership trap (important)
+RLS lets admins read **every** row, so for an admin `session.devices` and `listMyFarms()` return everyone's data.
+**Farmer screens must always filter** with `ownedDevices(devices, userId)` / `ownedFarms(farms, userId)`.
+**Admin screens must never filter.**
 
-### 6.2 Authentication
-- **`proxy.ts`** runs on every non-static request. It refreshes the Supabase session cookie and calls `auth.getUser()`.
-  - Not signed in → redirect to `/login` (or a **401 JSON** response for `/api/assistant/*`).
-  - Signed in and on `/login` or `/signup` → redirect to `/`.
-  - `/auth/callback` is skipped so the code exchange can happen first.
-- Login/signup use `lib/supabase/auth.ts`. Google OAuth first checks Supabase's public `/auth/v1/settings` to confirm Google is enabled.
-- The OAuth/email-confirm redirect lands on `app/auth/callback/route.ts`, which calls `exchangeCodeForSession`. It only allows same-origin `next` redirects.
-- Supabase dashboard config: Site URL plus redirect URL `https://<domain>/auth/callback` (and `http://localhost:3000/auth/callback`).
+### 7.3 Farmer screens
+- **Overview / device detail** (`overview-page.tsx`): the selected device is in `?device=` (`pickDevice`).
+  - Every **15 s** while the tab is visible (`pollOverview`), it refreshes the device, the latest *full* reading (`packet_type='sensor'`), the latest moisture packet and the last 10 sensor rows.
+  - The chart reloads only on range/metric change or every **5 min** (`pollChartHistory`), capped at the newest 1,000 sensor packets.
+  - Moisture-only packets never blank the other cards.
+- **Readings:** owned plus past devices (`my_reading_devices`).
+  - URL state: `device, range, from, to, packet, page`.
+  - Frozen time window, 25 rows per page, a chart, and CSV export (≤ 50k rows; formula-escaping applies to strings only).
+- **Devices:** rename (`updateDeviceDisplayName`; a null return = refused), change farm (`pair_device` with farmId or a new farm).
+- **Farms:** edit name/location (`updateFarm`; a null return = refused).
+- **Connect device:** `pairDevice()` → `pair_device` RPC. The first claimant wins. Backend error messages are shown as-is.
 
-### 6.3 Data access
-- **Data is fetched client-side** from components through `lib/services/*`, using the **browser** Supabase client with the anon key. **Row Level Security in Supabase is the actual access control.**
-- Services return raw rows; components map them with **`lib/services/presenters.ts`**. The presenters normalize enum casing (`'sensor_fault'` → `'Sensor fault'`), format relative times ("12 min ago"), and resolve joined relations that may be an object or an array.
-- Readings queries (`lib/services/readings.ts`):
-  - always filter `is_valid = true`;
-  - filter by **farm/plot name** (not ID) using `!inner` joins so non-matching rows drop out;
-  - order by `measured_at desc, device_id, sequence` (stable ordering is important for pagination and the assistant);
-  - page size 10; lookups page through 1000-row chunks so dropdowns aren't truncated;
-  - CSV export pages through everything, adds a BOM, and escapes formula-injection characters (`= + - @`).
+### 7.4 Admin screens (`/admin/*`, gated by `canAccessAdmin`)
+- All devices, device detail, Users, All farms, All readings (reuses `HistoryContent`), Activity (`admin_audit_log`).
+- Every mutation goes through `performAdminAction` → `admin_*` RPCs with a **required reason**, inside `ReasonDialog`.
+- Afterwards the affected lists are refreshed and a success message (`successMessage`) appears.
+- `allowedActions(device)`: Archived → restore only. Otherwise rename, plus lock/unlock, plus release (only if owned), plus archive.
+- "Assign to farmer" is disabled ("coming soon"); there's no backend for it.
 
-### 6.4 Supabase schema — owned by the backend team
-**Read [docs/backend-contract.md](docs/backend-contract.md). It is the source of truth and overrides anything else in this file.**
-The backend engineer owns the schema, RLS and RPCs. This repo does **not** migrate the database.
+### 7.5 Measurements
+Always use `lib/measurements.ts`:
+- `measurementsFor(hardware_version)` decides which cards to show (V1 = soil + NPK; V2 adds air/light + 3 estimates).
+- `formatMeasurement` turns null into **'Unavailable'**, never 0.
+- Estimates (salinity, TDS, irradiance) keep their "Estimated" label and formula.
 
-In short:
-- Tables: `profiles`, `farms` (per owner), `devices` (PK `device_id`), `sensor_readings`.
-- RLS: a user sees only their own devices, farms and readings. Super admins see everything.
-- Pairing goes through the `pair_device` RPC. The first claimant wins; ownership can't be taken over.
-- There's no backend for alerts, thresholds, notifications, irrigation, battery or signal.
+## 8. Status
 
-Product model:
-- **Farmer:** self sign-up, then pairs a device by its ID on first login, then sees only their devices.
-- **Super admin:** detected with `rpc('is_super_admin')`. Sees and manages all devices, farms, users, readings and the audit log through `admin_*` RPCs (contract §8). Assigning a device to a farmer has no backend, so it's UI-only (disabled).
-- Readings are scoped to **ownership at receipt**: a farmer sees only readings received while they owned the device.
+**Done (2026-11-16, branch `frontend-backend-contract`):** Phase 1 data layer · Phase 2 sign-up/pairing/session ·
+Phase 3 farmer Overview/Devices/Readings/Farms · Phase 4 admin. The super admin was verified live on `/admin/devices`.
 
-⚠️ `docs/archive/sql-do-not-run/20261115000000_greener_app_compat.sql` was written before the contract arrived. **DO NOT RUN IT.**
-Its "every signed-in user reads everything" policies would break per-farmer isolation, and its `farms` table conflicts with the backend's.
-The old code still queries tables that don't exist in the backend (`readings`, `alerts`, `plots`, `notifications`, `user_profiles`).
-The frontend is being migrated to the contract in phases.
+**Next:**
+- **Phase 5, the AI assistant.** Rebuild it on `sensor_readings`, then remove `lib/services/readings.ts`, `lib/readings-view.ts` and their old tests.
+- Two-account isolation test against the live DB.
+- Remove the unused leaflet deps.
 
-### 6.5 Greener Assistant (AI)
-There are two separate features:
-1. **Overview summary bubble** (`components/dashboard/floating-ai-assistant.tsx` + `lib/dashboard/build-ai-summary.ts`): **deterministic rules, no LLM.** It reports healthy, attention or critical based on open/critical alerts, offline devices and device statuses, and never claims "healthy" when there are no readings. Its "View details" link goes to `/readings?assistant=open`.
-2. **Readings chat** (`components/assistant/readings-assistant.tsx` → `POST /api/assistant/readings`):
-   - The browser sends **only** the filters (farm/plot name, device ID, ISO date window), page number, selected metric, and conversation history (max 20 turns). **No measurements are trusted from the client.**
-   - The route (`app/api/assistant/readings/route.ts`, Node runtime, 60s max) checks the same origin, a 40 KB body limit and an authenticated user, then runs `validate-request.ts`. That validation enforces a date range of 31 days or less, alternating user/assistant roles, 4000 characters per message and 20000 in total.
-   - `build-reading-context.ts` re-queries the **same 10-row page** the table shows, using the **cookie-authenticated server client (RLS preserved, never a service role)**. It also loads the plots' threshold configs and open alerts (capped at 50, with a truncation flag). A failed optional query is marked `'unavailable'`, never reported as "no alerts".
-   - `build-system-prompt.ts` holds the conservative rules: use only the given context, null means missing, don't invent thresholds or causes, never reclassify alerts, and give "Observation / Suggested checks" in plain text.
-   - `provider.ts` is the **only** OpenAI-specific file (30s timeout, `max_completion_tokens: 1000`). It never leaks the key or upstream error bodies to the client.
-   - The conversation is local state and resets when filters, page, metric or dates change, or when the panel closes.
-   - Swapping the AI provider means changing only `lib/assistant/provider.ts`.
+**Not in the backend (don't build or fake them):** alerts, thresholds, notifications, irrigation controls, battery/signal, assigning devices to farmers.
 
-## 7. Implementation status (what's real vs. pending)
+## 9. Domain rules
 
-**Working against Supabase:** auth (email + Google), the proxy auth gate, the Overview counts, map, trend, latest readings and alerts, the farms list and detail, devices, readings (filters, pagination, chart, CSV export), the alerts list and detail with history, users, the notification bell (list, unread count, mark as read), and both AI features.
+- **No fake success.** Check every RPC/query `error`. A null return from `update().select().maybeSingle()` means RLS refused it.
+- **Null = "Unavailable", never zero.** Label estimates as estimates. Don't invent metrics, health scores or labels like "toxic/bad".
+- **No hard-coded agronomic thresholds** and no alert logic in the UI. Describe measured values precisely.
+- **Times:** order by `received_at`, then `id`. Show `measured_at` when present and say which one is shown.
+  "Last data received" ≠ "online". Format with `Intl` in local time; never add hours by hand.
+- `cycle` repeats. Use the reading `id` as the key.
+- **Never** query `farm_private`, call `ingest_emqx_reading`, or use a service-role key. Device IDs are case-sensitive: trim them only.
+- **Don't use color alone** for status. Pair it with text and an icon.
+- **Don't redesign.** Keep the Greener palette (`#123d2d`, `#1f7a52`, `#b9e878`), rounded cards and Inter.
 
-**Not built yet / placeholders:**
-- **Settings page** (`components/settings-page.tsx`) holds **local React state only**. Nothing is saved to the database.
-- **Alert acknowledge/resolve** (`lib/services/alerts.ts`) are stubs that throw. They need an authenticated actor and an atomic DB operation (for example an RPC) that also writes `alert_history`.
-- `lowBatteryDevices` in the dashboard summary is `null` (not computed).
-- There is no **device ingestion API** (`POST /api/device/readings`), **rules/alert engine**, **device simulator**, **audit log**, or **backend RBAC enforcement** beyond RLS.
-- This repo has **no DB migrations**. The backend team owns the schema (see docs/backend-contract.md).
-- **New data layer:** `lib/data/*` (contract-based) and `lib/measurements.ts` (the 13 metrics). The old `lib/services/*` stays only until each page moves over, then gets deleted.
-- No distributed rate limiting for the assistant endpoint; add one before high-volume use.
+## 10. Code conventions
 
-Roadmap order from the spec: Foundation → Core entities → Readings/ingestion + simulator → Rules engine & alert lifecycle → Notifications & audit → Hardware (ESP32).
+- `@/*` alias. Compact style: single quotes, no semicolons, 2-space indent, dense one-line JSX (match the surrounding file).
+- New DB access goes in `lib/data/*` (throw Supabase errors, accept an optional `AbortSignal`). Logic worth testing goes in pure functions under `lib/`.
+- Components are `'use client'`. Errors show inline with `role="alert"`, success with `role="status"`.
+  Use `AbortController` for anything that can be superseded. Heavy widgets go through `next/dynamic`.
+- No new dependencies without the architect's approval. Modals use native `<dialog>`.
 
-## 8. Domain rules — DO and DON'T
+## 11. Testing
 
-These come from `Greener_README.md` and should be respected in every change:
+- `node:test` in `tests/*.test.cjs`. TS is transpiled on the fly with a small require shim (`@/` alias, `server-only` stubbed).
+- Supabase queries are tested with a **real `createClient()` plus a fake `global.fetch`**, asserting PostgREST URLs and bodies.
+- Suites: `data`, `session`, `overview`, `devices`, `history-farms`, `admin`, plus LEGACY `readings` and `assistant` (both rewritten or removed in Phase 5).
+- Live Supabase behavior (RLS, RPC errors) is **not** covered by tests. Verify it manually with real accounts.
 
-- **Do not redesign the UI** or replace the Greener visual language (green palette, rounded cards, Inter). Extend the existing patterns instead.
-- **No business logic in React components.** Never write `if (reading.moisture < 20) createAlert()` in the UI. Alerts come from a backend rules engine; the UI only displays them.
-- **No hard-coded universal agronomic thresholds.** Thresholds are configured per farm, plot or crop profile (`threshold_configurations`) and include persistence duration and severity.
-- **Alerts need persistence** (a condition must last long enough before an alert fires) and follow the lifecycle **OPEN → ACKNOWLEDGED → RESOLVED**, with full history and `resolved_by = system | user`.
-- **Alerts ≠ notifications.** An alert is a persistent operational record; a notification is a lightweight event pointing to it.
-- **`measured_at` ≠ `received_at`.** Charts use the measurement time. Delayed or offline-buffered readings must never be discarded.
-- **Sequence numbers** are per device. Never insert a duplicate `(device_id, sequence)`.
-- **Invalid sensor values** become diagnostics (`is_valid = false`). They must not replace the last known good reading.
-- **Device offline** = `now − last accepted reading > configured offline window`.
-- **Don't invent metrics**, farm-health scores, or labels like "toxic", "bad" or "dangerous". Describe measured conditions precisely.
-- **Don't use color alone** to show severity. Pair it with a text label or icon.
-- **No fake success states.** If a backend action isn't implemented, say so (as the alert stubs do).
-- **Security:** RBAC must be enforced in the backend or RLS, not only by hiding buttons. Never expose the service-role key or AI keys to the browser.
-- Units: moisture `%`, soil temperature `°C`, pH unitless (0–14), EC `µS/cm`, battery `V` (readings) / `%` (devices), signal `dBm`.
+## 12. Deployment (Vercel)
 
-Roles: **Administrator** (manage everything), **Farm Manager** (assigned farms, thresholds, alerts), **Agronomist** (read data, add notes), **Technician** (devices, diagnostics, configuration), **Viewer** (read-only).
+- `vercel.json` pins pnpm install and build.
+- Set the env vars for Production and Preview.
+- Add each deployed origin's `/auth/callback` to Supabase **Auth → URL Configuration → Redirect URLs** (also `http://localhost:3000/auth/callback`).
+- Work happens on branch `frontend-backend-contract`. Merge to `main` only after testing the preview. Details: [DEPLOYMENT.md](DEPLOYMENT.md).
 
-## 9. Code conventions
+## 13. Gotchas
 
-- Use the path alias `@/*` → repo root (for example `@/lib/services/readings`).
-- Page and UI components are `'use client'`. Server-only modules import `'server-only'` (all of `lib/assistant/*` except types, prompt and validation).
-- Put new data access in `lib/services/<entity>.ts`. Throw Supabase errors (`if (error) throw error`) and keep mapping in `presenters.ts`.
-- Components catch errors and show them inline with `role="alert"`. Use `AbortController` for fetches that can be superseded (see `readings-page.tsx`).
-- Heavy client-only widgets (Leaflet, Recharts, page bodies) load through `next/dynamic` with `PageLoading`/`PanelLoading` fallbacks.
-- Styling: Tailwind utility classes, often with literal brand hex values (`#1f7a52` primary green, `#123d2d` dark green, `#2b8b61`). Use `cn()` from `lib/utils.ts` for conditional classes, and keep focus-visible outlines and ARIA labels as the existing components do.
-- Code style is compact: single quotes, no semicolons, 2-space indent, frequently one-line JSX and functions. Match the surrounding file.
-- `next.config.mjs` sets `images.unoptimized: true`.
-
-## 10. Testing
-
-- Tests use Node's built-in runner (`node:test`) in `tests/*.test.cjs`. There's no Jest or Vitest. Each test transpiles the TS source on the fly with the `typescript` package and a small custom `require` shim. That shim maps `@/` imports and stubs `server-only`.
-- Supabase queries are tested by passing a **real `createClient()` with a fake `global.fetch`** and checking the generated PostgREST URLs, methods and `Prefer` headers. Use this pattern for new service tests.
-- Files: `readings.test.cjs` (query building, pagination, CSV), `assistant.test.cjs` (validation, context building, prompt), `dashboard-ai-summary.test.cjs`.
-- **Node 22 is required.** On Node 18, about half the tests fail with `Node.js detected but native WebSocket not found` from supabase-js. That comes from the environment, not from a code bug.
-
-## 11. Deployment (Vercel)
-
-`vercel.json` pins `corepack pnpm install --frozen-lockfile` and `corepack pnpm build`. Set the env vars from §4 for Production and Preview, then add the deployed `/auth/callback` URL in Supabase Auth's URL configuration. Full checklist: [DEPLOYMENT.md](DEPLOYMENT.md).
-
-## 12. Known issues / gotchas
-
-- The new sensors (NPK, air, light) exist in `sensor_readings` and the `readings` view, but the UI and the assistant prompt don't use them yet. The prompt still says "There are no NPK readings".
-- Battery and signal aren't real columns in `sensor_readings`. They may be inside `raw_payload`. Until mapped, battery/signal show as unavailable.
-- `README.md` is empty. The real docs are `Greener_README.md`, `DEPLOYMENT.md` and `lib/assistant/README.md`.
-- Both `package-lock.json` and `pnpm-lock.yaml` exist. **pnpm is authoritative.** Don't run `npm install`.
-- Readings filter farms and plots **by name**, so two farms with the same name are merged. This is deliberate for now and matches the assistant's behavior.
-- `lib/mock-data.ts` is unused legacy data from v0. Don't wire it back into components.
-- The farm `status` in `toFarm` is a simple heuristic (any offline device → Warning). It should eventually come from the backend.
+- `README.md` is empty. The product spec is [Greener_README.md](Greener_README.md). It predates the backend contract (it mentions alerts/RBAC roles that don't exist), so the contract wins.
+- Both `package-lock.json` and `pnpm-lock.yaml` exist. pnpm is authoritative.
+- Several backend details are still unconfirmed (contract §10): pairing error codes, profile-insert RLS,
+  `my_reading_devices` columns, the bulk-lock return shape, and whether `farm_id_at_receipt` exists (the types use `owner_user_id_at_receipt`).

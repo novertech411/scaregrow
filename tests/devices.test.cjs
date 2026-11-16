@@ -117,21 +117,13 @@ test('rename updates only the display name and awaits session refresh after succ
   assert.equal(requests[0].url.searchParams.get('device_id'), 'eq.GEF-003')
   assert.equal(requests[0].method, 'PATCH')
 })
-test('dead routes render only the shared unavailable panel without loading old pages', () => {
-  for (const pathname of ['/alerts', '/alerts/123', '/users', '/settings']) {
-    const { default: Dashboard } = load('components/greener-dashboard.tsx', {
-      'next/navigation': { usePathname: () => pathname },
-      'next/dynamic': { default: () => () => { throw new Error('An old page must not mount') } },
-      '@/components/session/landing-gate': { LandingGate: ({ children }) => children },
-      '@/components/layout/sidebar': { Sidebar: () => null },
-      '@/components/layout/mobile-nav': { MobileNav: () => null },
-      '@/components/layout/header': { Header: () => null },
-      '@/components/dashboard/overview-page': { OverviewPage: () => { throw new Error('Overview must not mount') } },
-    })
-    const markup = renderToStaticMarkup(React.createElement(Dashboard))
-    assert.match(markup, /Not available yet/)
-    assert.match(markup, /This section isn&#x27;t available yet./)
-  }
+test('dead route directories, page keys and unavailable panel are removed', () => {
+  for (const route of ['alerts', 'users', 'settings']) assert.equal(fs.existsSync(path.resolve(__dirname, '..', 'app', route)), false)
+  assert.equal(fs.existsSync(path.resolve(__dirname, '..', 'components/ui/not-available.tsx')), false)
+  const keys = fs.readFileSync(path.resolve(__dirname, '..', 'lib/types.ts'), 'utf8')
+  assert.doesNotMatch(keys, /'Alerts'|'Users'|'Settings'/)
+  const shell = fs.readFileSync(path.resolve(__dirname, '..', 'components/greener-dashboard.tsx'), 'utf8')
+  assert.doesNotMatch(shell, /NotAvailable|pathname.startsWith\('\/(alerts|users|settings)'\)/)
 })
 
 test('Overview URL selection cannot expose another owners device in an admin session', () => {

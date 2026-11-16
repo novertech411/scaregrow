@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Database, DeviceAction, HardwareVersion } from '@/lib/supabase/database.types'
-import { listMyDevices } from '@/lib/data/devices'
-import { listMyFarms } from '@/lib/data/farms'
+import type { DeviceWithFarm } from '@/lib/data/devices'
+import type { FarmRow, AdminUserRow } from '@/lib/supabase/database.types'
 
 type Functions = Database['public']['Functions']
 type AdminRpc = 'admin_register_device' | 'admin_manage_device' | 'admin_set_all_devices_locked' | 'admin_update_device_name' | 'admin_update_farm'
@@ -47,11 +47,46 @@ export async function listUsers({ limit = 50, offset = 0 }: { limit?: number; of
   if (error) throw error
   return data ?? []
 }
-// RLS grants super admins all rows; use the same public browser client.
-export function listAllDevices(signal?: AbortSignal) { return listMyDevices(signal) }
-export function listAllFarms(signal?: AbortSignal) { return listMyFarms(signal) }
-export async function listAuditLog({ limit, offset }: { limit: number; offset: number }, signal?: AbortSignal) {
+// Admin directories page through every row rather than relying on the API row cap.
+export async function listAllDevices(signal?: AbortSignal): Promise<DeviceWithFarm[]> {
+  const rows: DeviceWithFarm[] = []
+  for (let offset = 0; ; offset += 1000) {
+    signal?.throwIfAborted()
+    let query = createClient().from('devices').select('*, farm:farms!devices_farm_id_fkey(id,name,location)').order('device_id').range(offset, offset + 999)
+    if (signal) query = query.abortSignal(signal)
+    const { data, error } = await query
+    if (error) throw error
+    rows.push(...data ?? [])
+    if (!data || data.length < 1000) return rows
+  }
+}
+export async function listAllFarms(signal?: AbortSignal): Promise<FarmRow[]> {
+  const rows: FarmRow[] = []
+  for (let offset = 0; ; offset += 1000) {
+    signal?.throwIfAborted()
+    let query = createClient().from('farms').select('*').order('name').order('id').range(offset, offset + 999)
+    if (signal) query = query.abortSignal(signal)
+    const { data, error } = await query
+    if (error) throw error
+    rows.push(...data ?? [])
+    if (!data || data.length < 1000) return rows
+  }
+}
+export const USER_DIRECTORY_LIMIT = 5000
+export type UserDirectory = { users: AdminUserRow[]; truncated: boolean }
+export async function listAllUsers(signal?: AbortSignal): Promise<UserDirectory> {
+  const users: AdminUserRow[] = []
+  for (let offset = 0; offset < USER_DIRECTORY_LIMIT; offset += 100) {
+    signal?.throwIfAborted()
+    const page = await listUsers({ limit: Math.min(100, USER_DIRECTORY_LIMIT - offset), offset }, signal)
+    users.push(...page.slice(0, USER_DIRECTORY_LIMIT - users.length))
+    if (page.length < 100) return { users, truncated: false }
+  }
+  return { users, truncated: true }
+}
+export async function listAuditLog({ limit, offset, targetId }: { limit: number; offset: number; targetId?: string }, signal?: AbortSignal) {
   let query = createClient().from('admin_audit_log').select('*').order('created_at', { ascending: false }).range(offset, offset + limit - 1)
+  if (targetId !== undefined) query = query.eq('target_id', targetId)
   if (signal) query = query.abortSignal(signal)
   const { data, error } = await query
   if (error) throw error

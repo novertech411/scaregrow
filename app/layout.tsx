@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
+import { AdminFeedbackProvider } from '@/components/admin/feedback'
 import { GreenerSessionProvider } from '@/components/session/greener-session'
 
 const inter = localFont({
@@ -36,7 +37,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased`}>
-        <GreenerSessionProvider>{children}</GreenerSessionProvider>
+        <GreenerSessionProvider><AdminFeedbackProvider>{children}</AdminFeedbackProvider></GreenerSessionProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

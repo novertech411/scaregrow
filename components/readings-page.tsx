@@ -36,7 +36,7 @@ function ReadingHistory() {
     {!devices.length ? <section className="rounded-2xl border border-[#d7e8dc] bg-white p-8"><h1 className="text-2xl font-semibold text-[#123d2d]">Readings</h1><p className="mt-3 text-sm text-slate-500">{error ? 'Device history is unavailable.' : 'No reading devices available yet.'}</p></section> : <HistoryContent devices={devices} />}
   </div>
 }
-function HistoryContent({ devices }: { devices: ReadingDevice[] }) {
+export function HistoryContent({ devices, title = 'Readings', description = 'Explore measurements received during your ownership.' }: { devices: ReadingDevice[]; title?: string; description?: string }) {
   const params = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
@@ -53,7 +53,7 @@ function HistoryContent({ devices }: { devices: ReadingDevice[] }) {
     setRefresh((value) => value + 1)
   }
   return <>
-    <div className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="text-2xl font-semibold tracking-tight text-[#123d2d]">Readings</h1><p className="mt-1 text-sm text-slate-500">Explore measurements received during your ownership.</p></div><button type="button" onClick={reload} className="rounded-xl border border-[#d7e8dc] bg-white px-4 py-2.5 text-sm font-semibold text-[#1f7a52]">Refresh</button></div>
+    <div className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="text-2xl font-semibold tracking-tight text-[#123d2d]">{title}</h1><p className="mt-1 text-sm text-slate-500">{description}</p></div><button type="button" onClick={reload} className="rounded-xl border border-[#d7e8dc] bg-white px-4 py-2.5 text-sm font-semibold text-[#1f7a52]">Refresh</button></div>
     <HistoryFilters key={filterKey} state={state} devices={devices} onApply={replace} />
     <DeviceHistoryChart deviceId={state.deviceId} hardwareVersion={selected.hardwareVersion} window={{ from: state.from, to: state.to }} refreshKey={refresh} />
     <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-500">Received {formatTimestamp(state.from)} – {formatTimestamp(state.to)}</p><ExportButton key={filterKey} state={state} /></div>
