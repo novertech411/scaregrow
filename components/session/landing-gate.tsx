@@ -4,13 +4,14 @@ import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { PageLoading } from '@/components/ui/page-loading'
 import { useGreenerSession } from '@/components/session/greener-session'
+import { ownedDevices } from '@/lib/session/owned-devices'
 import { resolveLanding } from '@/lib/session/landing'
 
 export function LandingGate({ children }: { children: React.ReactNode }) {
   const session = useGreenerSession()
   const pathname = usePathname()
   const router = useRouter()
-  const target = resolveLanding({ status: session.status, isAdmin: session.isAdmin, deviceCount: session.devices.length, pathname })
+  const target = resolveLanding({ status: session.status, isAdmin: session.isAdmin, deviceCount: ownedDevices(session.devices, session.user?.id).length, pathname })
   useEffect(() => {
     if (target) router.replace(target)
     else if (session.status === 'signed-out') router.replace('/login')

@@ -29,7 +29,7 @@ export type SensorReadingRow = {
   source_message_id: string | null
   received_at: string
   measured_at: string | null
-  farm_id_at_receipt: string | null
+  owner_user_id_at_receipt: string | null
   raw_payload: Json
   soil_moisture_pct: number | null
   soil_temperature_c: number | null
@@ -61,11 +61,10 @@ type Table<Row, Insert = Partial<Row>, Update = Partial<Row>, Relationships exte
   Row: Row; Insert: Insert; Update: Update; Relationships: Relationships
 }
 type Rpc<Args, Returns> = { Args: Args; Returns: Returns }
-// LEGACY compatibility for obsolete columns and joins used by existing UI queries.
+// LEGACY: only the kept Phase 5 assistant/readings helpers require these columns and joins.
 // These are not claims about the contracted schema and must be removed with that UI.
-type LegacyFarmColumns = { latitude: number | null; longitude: number | null }
-type LegacyDeviceColumns = { status: string | null; plot_id: string | null; last_seen: string | null }
-type LegacyPlotRow = Record<string, unknown> & { id: string; name: string; crop: string | null; soil_profile: string | null; planting_date: string | null }
+type LegacyDeviceColumns = { status: string | null; plot_id: string | null }
+type LegacyPlotRow = Record<string, unknown> & { id: string; name: string; crop: string | null }
 type LegacyDevicePlotRelation = {
   foreignKeyName: 'legacy_devices_plot_id_fkey'; columns: ['plot_id']; isOneToOne: false; referencedRelation: 'plots'; referencedColumns: ['id']
 }
@@ -77,7 +76,7 @@ export type Database = {
   public: {
     Tables: {
       profiles: Table<ProfileRow, { id: string; full_name?: string | null; created_at?: string }, { full_name?: string | null }>
-      farms: Table<FarmRow & LegacyFarmColumns, Partial<FarmRow> & Pick<FarmRow, 'owner_user_id' | 'name'>, { name?: string; location?: string | null }>
+      farms: Table<FarmRow, Partial<FarmRow> & Pick<FarmRow, 'owner_user_id' | 'name'>, { name?: string; location?: string | null }>
       devices: Table<DeviceRow & LegacyDeviceColumns, Partial<DeviceRow> & Pick<DeviceRow, 'device_id' | 'hardware_version'>, { display_name?: string | null }, [{
         foreignKeyName: 'devices_farm_id_fkey'; columns: ['farm_id']; isOneToOne: false; referencedRelation: 'farms'; referencedColumns: ['id']
       }, LegacyDevicePlotRelation]>
@@ -89,9 +88,6 @@ export type Database = {
       readings: LegacyTable
       alerts: LegacyTable
       plots: Table<LegacyPlotRow, Record<string, unknown>, Record<string, unknown>, [LegacyPlotFarmRelation]>
-      notifications: LegacyTable
-      user_profiles: LegacyTable
-      alert_history: LegacyTable
       threshold_configurations: LegacyTable
     }
     Views: Record<string, never>

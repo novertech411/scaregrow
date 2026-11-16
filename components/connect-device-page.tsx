@@ -7,6 +7,7 @@ import { ArrowRight } from 'lucide-react'
 import { useGreenerSession } from '@/components/session/greener-session'
 import { PageLoading } from '@/components/ui/page-loading'
 import { listMyFarms } from '@/lib/data/farms'
+import { ownedDevices, ownedFarms } from '@/lib/session/owned-devices'
 import { pairDevice } from '@/lib/data/pairing'
 import { signOut } from '@/lib/supabase/auth'
 import type { FarmRow } from '@/lib/supabase/database.types'
@@ -55,12 +56,12 @@ function ConnectDeviceForm() {
   const submitting = useRef(false)
   const request = useRef<AbortController | null>(null)
   const accountRequest = useRef(false)
-  const hasDevices = session.devices.some((device) => device.owner_user_id === session.user?.id)
+  const hasDevices = ownedDevices(session.devices, session.user?.id).length > 0
 
   useEffect(() => {
     const controller = new AbortController()
     void listMyFarms(controller.signal).then((rows) => {
-      if (!controller.signal.aborted) setFarms(rows)
+      if (!controller.signal.aborted) setFarms(ownedFarms(rows, session.user?.id))
     }).catch((error) => {
       if (!controller.signal.aborted) setFarmError(messageOf(error))
     }).finally(() => { if (!controller.signal.aborted) setFarmsLoading(false) })

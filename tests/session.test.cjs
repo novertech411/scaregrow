@@ -40,14 +40,14 @@ function deferred() {
 }
 
 test('ready farmers with no devices are gated on every dashboard route', () => {
-  for (const pathname of ['/', '/farms', '/farms/1', '/devices', '/readings', '/alerts', '/users', '/settings']) {
+  for (const pathname of ['/', '/farms', '/farms/1', '/devices', '/alerts', '/users', '/settings']) {
     assert.equal(resolveLanding({ status: 'ready', isAdmin: false, deviceCount: 0, pathname }), '/connect-device')
   }
 })
 test('admins, device owners, auth pages, and connect-device stay put', () => {
   assert.equal(resolveLanding({ status: 'ready', isAdmin: true, deviceCount: 0, pathname: '/' }), null)
   assert.equal(resolveLanding({ status: 'ready', isAdmin: false, deviceCount: 1, pathname: '/' }), null)
-  for (const pathname of ['/login', '/signup', '/auth/callback', '/connect-device']) {
+  for (const pathname of ['/login', '/signup', '/auth/callback', '/connect-device', '/readings']) {
     assert.equal(resolveLanding({ status: 'ready', isAdmin: false, deviceCount: 0, pathname }), null)
   }
 })

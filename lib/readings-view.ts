@@ -1,5 +1,5 @@
 import type { ReadingRow } from '@/lib/services/readings'
-import { toReading } from '@/lib/services/presenters'
+
 
 export type Parameter = 'Moisture' | 'Temperature' | 'pH' | 'EC'
 
@@ -10,9 +10,24 @@ export const readingSeries = {
   EC: { value: 'ec', unit: 'µS/cm', color: '#8b5e8e', domain: [0, 'auto'] },
 } as const
 
+// Legacy presentation is kept locally for the Phase 5 assistant and existing tests.
+function legacyReading(row: ReadingRow) {
+  const label = (value: string | null | undefined, fallback = 'Unknown') => value || fallback
+  const key = String(row.device?.status ?? '').toLowerCase().replaceAll('_', ' ')
+  const status = key === 'online' ? 'Online' : ['warning', 'sensor fault'].includes(key) ? 'Warning' : 'Offline'
+  const date = new Date(row.measured_at)
+  const invalid = Number.isNaN(date.valueOf())
+  const minutes = Math.max(0, Math.floor((Date.now() - date.valueOf()) / 60000))
+  const updated = !row.measured_at ? 'Never' : invalid ? 'Unknown' : minutes < 1 ? 'Just now' : minutes < 60 ? `${minutes} min ago` : minutes < 1440 ? `${Math.floor(minutes / 60)}h ago` : date.toLocaleDateString()
+  const extras = row as ReadingRow & { battery_v?: number; signal_dbm?: number }
+  return { farm: label(row.device?.farm?.name), plot: label(row.device?.plot?.name), crop: label(row.device?.plot?.crop, '—'), device: String(row.device_id), status,
+    moisture: Number(row.moisture_pct ?? 0), temperature: Number(row.soil_temp_c ?? 0), ph: Number(row.ph ?? 0), ec: Number(row.ec_us_cm ?? 0), updated,
+    battery: Number(extras.battery_v ?? 0), signal: extras.signal_dbm == null ? 'Unavailable' : `${extras.signal_dbm} dBm`, timestamp: invalid ? '—' : date.toLocaleTimeString(), recorded: invalid ? '—' : date.toLocaleString() }
+}
+
 export function toPageReading(row: ReadingRow) {
   return {
-    ...toReading(row),
+    ...legacyReading(row),
     key: `${row.device_id}:${row.sequence}`,
     recorded: row.measured_at,
     timestamp: new Date(row.measured_at).toLocaleString(),
