@@ -16,8 +16,8 @@ export const metadata: Metadata = {
   title: 'Greener | Farm monitoring',
   description: 'Operational farm and soil monitoring for Green Eden Farms.',
   icons: {
-    icon: [{ url: '/images/greener-tab.png', type: 'image/png', sizes: '48x48' }],
-    apple: [{ url: '/images/greener-apple.png', type: 'image/png', sizes: '180x180' }],
+    icon: [{ url: '/images/greener-leaf-48.png', type: 'image/png', sizes: '48x48' }],
+    apple: [{ url: '/images/greener-leaf-apple.png', type: 'image/png', sizes: '180x180' }],
   },
 }
 
