@@ -44,9 +44,10 @@ test('ready farmers with no devices are gated on every dashboard route', () => {
     assert.equal(resolveLanding({ status: 'ready', isAdmin: false, deviceCount: 0, pathname }), '/connect-device')
   }
 })
-test('admins without owned devices land in admin; other exceptions stay put', () => {
+test('admins on / always land in admin; other exceptions stay put', () => {
   assert.equal(resolveLanding({ status: 'ready', isAdmin: true, deviceCount: 0, pathname: '/' }), '/admin/devices')
-  assert.equal(resolveLanding({ status: 'ready', isAdmin: true, deviceCount: 1, pathname: '/' }), null)
+  assert.equal(resolveLanding({ status: 'ready', isAdmin: true, deviceCount: 1, pathname: '/' }), '/admin/devices')
+  assert.equal(resolveLanding({ status: 'ready', isAdmin: true, deviceCount: 1, pathname: '/devices' }), null)
   assert.equal(resolveLanding({ status: 'ready', isAdmin: true, deviceCount: 0, pathname: '/admin/farms' }), null)
   assert.equal(resolveLanding({ status: 'ready', isAdmin: false, deviceCount: 1, pathname: '/' }), null)
   for (const pathname of ['/login', '/signup', '/auth/callback', '/connect-device', '/readings']) {
