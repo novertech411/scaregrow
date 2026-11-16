@@ -196,6 +196,13 @@ Phase 3 farmer Overview/Devices/Readings/Farms · Phase 4 admin. The super admin
 
 ## 13. Gotchas
 
+- **The app runs under the base path `/login`** (`next.config.mjs`; override at build time with `NEXT_PUBLIC_BASE_PATH`, `""` = root).
+  The main website rewrites `greenedenfarms.org/login/*` to this app, so the sign-in page is `/login/login` and local dev is `localhost:3000/login`.
+  - `next/link`, `useRouter` and `redirect()` add the prefix automatically.
+  - Plain `<img>`/`<a>`, `fetch`, metadata icons and Supabase redirect URLs must use `withBase()` from `lib/base-path.ts`.
+  - Behind the rewrite the app sees its own `*.vercel.app` host, so **never use absolute redirects**. `proxy.ts` shows the sign-in page in place for signed-out visitors, and the auth callback uses relative `Location` headers.
+  - This was a demo-day setup; the planned long-term setup is the subdomain `app.greenedenfarms.org` with `NEXT_PUBLIC_BASE_PATH=""`.
+
 - `README.md` is empty. The product spec is [Greener_README.md](Greener_README.md). It predates the backend contract (it mentions alerts/RBAC roles that don't exist), so the contract wins.
 - Both `package-lock.json` and `pnpm-lock.yaml` exist. pnpm is authoritative.
 - Several backend details are still unconfirmed (contract §10): pairing error codes, profile-insert RLS,
