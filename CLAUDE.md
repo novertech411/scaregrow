@@ -116,7 +116,7 @@ tests/*.test.cjs              node:test suites (see §11)
   `{ status, user, isAdmin, profile, devices, error, profileError, refresh() }` and clears everything on sign-out.
 - `LandingGate` + `resolveLanding()` (UX only):
   - a farmer with 0 owned devices → `/connect-device`. `/readings` is exempt, so past-device history stays reachable.
-  - an admin with 0 owned devices on `/` → `/admin/devices`.
+  - an admin on `/` always → `/admin/devices`. The admin sidebar shows only the admin section; farmer pages stay reachable by URL.
 
 ### 7.2 The ownership trap (important)
 RLS lets admins read **every** row, so for an admin `session.devices` and `listMyFarms()` return everyone's data.
