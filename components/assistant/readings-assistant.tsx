@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Bot, ChevronDown, LoaderCircle, RotateCcw, Send } from 'lucide-react'
 import type { AssistantMessage as Message, ReadingAssistantSelection } from '@/lib/assistant/types'
 import { AssistantMessage } from './assistant-message'
+import { withBase } from '@/lib/base-path'
 
 const questions = ['What needs attention?', 'Why is moisture changing?', 'Compare these readings', 'What should I check next?']
 
@@ -52,7 +53,7 @@ function Conversation({ selection, disabled }: { selection: ReadingAssistantSele
     setFailedQuestion('')
     setLoading(true)
     try {
-      const response = await fetch('/api/assistant/readings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selection, messages: next }), signal: controller.signal })
+      const response = await fetch(withBase('/api/assistant/readings'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selection, messages: next }), signal: controller.signal })
       const result = await response.json().catch(() => null)
       if (!response.ok || typeof result?.answer !== 'string') throw new Error(result?.error || 'Unable to reach the assistant. Please try again.')
       if (!controller.signal.aborted) {

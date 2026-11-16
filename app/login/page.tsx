@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signIn } from '@/lib/supabase/auth'
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react'
+import { withBase } from '@/lib/base-path'
+import { useGreenerSession } from '@/components/session/greener-session'
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -13,6 +15,9 @@ export default function LoginPage() {
   const [message, setMessage] = useState('')
   const [pending, setPending] = useState(false)
   const router = useRouter()
+  const { user } = useGreenerSession()
+  // Already signed in: continue to the app (client-side, so the browser stays on the current domain).
+  useEffect(() => { if (user) router.replace('/') }, [user, router])
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has('error')) {
@@ -38,8 +43,8 @@ export default function LoginPage() {
   return (
     <main className="relative isolate flex min-h-svh items-center justify-center overflow-hidden bg-[#123d2d] p-4 sm:p-6 lg:justify-end lg:p-10">
       <img
-        src="/images/login.webp"
-        srcSet="/images/login-mobile.webp 640w, /images/login.webp 1280w"
+        src={withBase('/images/login.webp')}
+        srcSet={`${withBase('/images/login-mobile.webp')} 640w, ${withBase('/images/login.webp')} 1280w`}
         sizes="100vw"
         width={1280}
         height={839}
@@ -50,7 +55,7 @@ export default function LoginPage() {
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(18,61,45,.16),rgba(18,61,45,.46)_48%,rgba(18,61,45,.84))]" aria-hidden="true" />
       <section aria-label="Sign in to Greener" className="w-full max-w-[420px] rounded-[24px] border border-white/60 bg-white/95 p-6 shadow-[0_24px_80px_rgba(8,35,24,.3)] backdrop-blur sm:p-7 lg:mr-[5vw]">
         <div className="mb-5 flex items-center gap-2.5">
-          <img src="/images/icon.png" alt="Logo" className="size-6" />
+          <img src={withBase('/images/icon.png')} alt="Logo" className="size-6" />
           <p className="text-lg font-bold tracking-tight text-[#123d2d]">Greener</p>
         </div>
 

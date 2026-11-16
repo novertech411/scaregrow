@@ -11,6 +11,7 @@ import { ownedDevices, ownedFarms } from '@/lib/session/owned-devices'
 import { pairDevice } from '@/lib/data/pairing'
 import { signOut } from '@/lib/supabase/auth'
 import type { FarmRow } from '@/lib/supabase/database.types'
+import { withBase } from '@/lib/base-path'
 
 const inputClass = 'h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#4d9b6b] focus:ring-2 focus:ring-[#dff1c3]'
 const labelClass = 'flex flex-col gap-1.5 text-xs font-semibold text-slate-700'
@@ -24,14 +25,14 @@ export function ConnectDevicePage() {
   useEffect(() => { if (session.status === 'signed-out') router.replace('/login') }, [session.status, router])
   return (
     <main className="relative isolate flex min-h-svh items-center justify-center overflow-hidden bg-[#123d2d] p-4 sm:p-6 lg:justify-end lg:p-10">
-      <img src="/images/login.webp" srcSet="/images/login-mobile.webp 640w, /images/login.webp 1280w" sizes="100vw" width={1280} height={839} alt="" fetchPriority="high" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+      <img src={withBase('/images/login.webp')} srcSet={`${withBase('/images/login-mobile.webp')} 640w, ${withBase('/images/login.webp')} 1280w`} sizes="100vw" width={1280} height={839} alt="" fetchPriority="high" className="absolute inset-0 -z-20 h-full w-full object-cover" />
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(18,61,45,.16),rgba(18,61,45,.46)_48%,rgba(18,61,45,.84))]" aria-hidden="true" />
       <section aria-label="Connect a device to Greener" className="w-full max-w-[420px] rounded-[24px] border border-white/60 bg-white/95 p-6 shadow-[0_24px_80px_rgba(8,35,24,.3)] backdrop-blur sm:p-7 lg:mr-[5vw]">
         <div className="mb-5 flex items-center gap-2.5">
-          <img src="/images/icon.png" alt="Logo" className="size-6" />
+          <img src={withBase('/images/icon.png')} alt="Logo" className="size-6" />
           <p className="text-lg font-bold tracking-tight text-[#123d2d]">Greener</p>
         </div>
-        {session.user ? <ConnectDeviceForm key={session.user.id} /> : session.status === 'error' ? <p role="alert" className="text-sm text-red-700">{session.error?.message} <a href="/login" className="underline">Back to sign in</a></p> : <PageLoading />}
+        {session.user ? <ConnectDeviceForm key={session.user.id} /> : session.status === 'error' ? <p role="alert" className="text-sm text-red-700">{session.error?.message} <a href={withBase('/login')} className="underline">Back to sign in</a></p> : <PageLoading />}
       </section>
     </main>
   )

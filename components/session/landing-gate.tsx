@@ -6,6 +6,7 @@ import { PageLoading } from '@/components/ui/page-loading'
 import { useGreenerSession } from '@/components/session/greener-session'
 import { ownedDevices } from '@/lib/session/owned-devices'
 import { resolveLanding } from '@/lib/session/landing'
+import { withBase } from '@/lib/base-path'
 
 export function LandingGate({ children }: { children: React.ReactNode }) {
   const session = useGreenerSession()
@@ -24,7 +25,7 @@ export function LandingGate({ children }: { children: React.ReactNode }) {
         if (session.user) void session.refresh().catch(() => {})
         else window.location.reload()
       }} className="rounded-xl bg-[#123d2d] px-4 py-2 text-sm font-semibold text-white">Try again</button>
-      <a href="/login" className="ml-4 text-sm text-[#1f7a52] underline">Back to sign in</a>
+      <a href={withBase('/login')} className="ml-4 text-sm text-[#1f7a52] underline">Back to sign in</a>
     </main>
   )
   if (session.status !== 'ready' || target) return <main className="mx-auto max-w-5xl p-6"><PageLoading /></main>

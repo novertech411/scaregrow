@@ -177,7 +177,7 @@ test('disposing cancels pending work without publishing after unmount', async ()
   assert.equal(s.calls.length, 0)
   assert.equal(s.states.length, count)
 })
-test('proxy covers connect-device and redirects unauthenticated requests to login', async () => {
+test('proxy covers connect-device and shows sign-in in place for unauthenticated requests', async () => {
   let authCalls = 0
   const { proxy, config } = load('proxy.ts', {
     '@supabase/ssr': { createServerClient: () => ({ auth: { getUser: async () => { authCalls++; return { data: { user: null }, error: null } } } }) },
@@ -185,8 +185,13 @@ test('proxy covers connect-device and redirects unauthenticated requests to logi
   const { NextRequest } = require('next/server')
   const matcher = new RegExp(`^${config.matcher[0]}$`)
   assert.ok(matcher.test('/connect-device'))
+  // Signed-out page requests render the sign-in page in place (no redirect), so users stay on the
+  // main website's domain behind its rewrite.
   const response = await proxy(new NextRequest('https://greener.example.test/connect-device'))
-  assert.equal(response.status, 307)
-  assert.equal(response.headers.get('location'), 'https://greener.example.test/login')
+  assert.equal(response.headers.get('location'), null)
+  assert.equal(new URL(response.headers.get('x-middleware-rewrite')).pathname, '/login')
   assert.equal(authCalls, 1)
+  const based = await proxy(new NextRequest('https://greenerai.vercel.app/login/connect-device', { nextConfig: { basePath: '/login' } }))
+  assert.equal(based.headers.get('location'), null)
+  assert.equal(new URL(based.headers.get('x-middleware-rewrite')).pathname, '/login/login')
 })

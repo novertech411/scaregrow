@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { withBase } from '@/lib/base-path'
 
 export async function signIn(email: string, password: string) {
   const { data, error } = await createClient().auth.signInWithPassword({ email, password })
@@ -12,7 +13,7 @@ export async function signUp(email: string, password: string, fullName?: string)
     password,
     options: {
       data: { full_name: fullName },
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
+      emailRedirectTo: `${window.location.origin}${withBase('/auth/callback')}`,
     },
   })
   if (error) throw error
@@ -37,7 +38,7 @@ export async function signInWithGoogle() {
   const { data, error } = await createClient().auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${window.location.origin}${withBase('/auth/callback')}`,
     },
   })
   if (error) throw error

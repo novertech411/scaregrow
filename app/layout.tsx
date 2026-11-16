@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
+import { withBase } from '@/lib/base-path'
 import { AdminFeedbackProvider } from '@/components/admin/feedback'
 import { GreenerSessionProvider } from '@/components/session/greener-session'
 
@@ -16,8 +17,8 @@ export const metadata: Metadata = {
   title: 'Greener | Farm monitoring',
   description: 'Operational farm and soil monitoring for Green Eden Farms.',
   icons: {
-    icon: [{ url: '/images/greener-leaf-48.png', type: 'image/png', sizes: '48x48' }],
-    apple: [{ url: '/images/greener-leaf-apple.png', type: 'image/png', sizes: '180x180' }],
+    icon: [{ url: withBase('/images/greener-leaf-48.png'), type: 'image/png', sizes: '48x48' }],
+    apple: [{ url: withBase('/images/greener-leaf-apple.png'), type: 'image/png', sizes: '180x180' }],
   },
 }
 

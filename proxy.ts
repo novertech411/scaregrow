@@ -32,24 +32,24 @@ export async function proxy(request: NextRequest) {
       response.cookies.getAll().forEach((cookie) => unauthorized.cookies.set(cookie))
       return unauthorized
     }
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    url.search = ''
-    const redirect = NextResponse.redirect(url)
-    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie))
-    return redirect
+    return showSignIn(request, response)
   }
 
-  if (user && !error && onAuthPage) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    url.search = ''
-    const redirect = NextResponse.redirect(url)
-    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie))
-    return redirect
-  }
+  // Signed-in users on /login or /signup are sent on by those pages in the browser (see app/login/page.tsx).
 
   return response
+}
+
+// Behind the main website's rewrite (greenedenfarms.org/login/* → this app) the request carries this
+// app's *.vercel.app host, so an absolute redirect would bounce users off the website's domain, and
+// Next.js rejects relative redirects here. Render the sign-in page in place instead (server-side rewrite).
+function showSignIn(request: NextRequest, response: NextResponse) {
+  const url = request.nextUrl.clone()
+  url.pathname = '/login'
+  url.search = ''
+  const rewrite = NextResponse.rewrite(url)
+  response.cookies.getAll().forEach((cookie) => rewrite.cookies.set(cookie))
+  return rewrite
 }
 
 export const config = {
